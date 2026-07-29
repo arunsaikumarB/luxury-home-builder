@@ -1,0 +1,699 @@
+import { useEffect, useRef, useState, type RefObject } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronsDown } from 'lucide-react'
+import { MagneticButton } from '@/components/shared/MagneticButton'
+import { usePrefersReducedMotion } from '@/hooks/useMediaQuery'
+import { cn } from '@/lib/utils'
+import type { WalkthroughSection } from '@/data/walkthrough'
+
+gsap.registerPlugin(ScrollTrigger)
+
+export type VideoScrollSequenceProps = {
+  videos: WalkthroughSection[]
+  scrollVhPerSection?: number
+  objectFit?: 'cover' | 'contain'
+  preloadStrategy?: 'all' | 'adjacent'
+  className?: string
+  onReady?: () => void
+  onSectionChange?: (index: number) => void
+}
+
+function OverlayContent({
+  section,
+  fadeRef,
+}: {
+  section: WalkthroughSection
+  fadeRef: RefObject<HTMLDivElement | null>
+}) {
+  return (
+    <div
+      ref={fadeRef}
+      className="pointer-events-none absolute inset-0 z-10 flex items-end md:items-center will-change-[opacity]"
+      style={{ opacity: 1 }}
+    >
+      <div className="pointer-events-auto mx-auto w-full max-w-[1600px] px-5 md:px-10 pb-20 md:pb-0">
+        {section.variant === 'hero' && (
+          <div className="max-w-4xl">
+            <p className="mb-5 text-[11px] uppercase tracking-[0.35em] text-background/65">
+              {section.label}
+            </p>
+            <h1 className="font-display text-[clamp(2.8rem,8vw,6.5rem)] leading-[0.95] text-background text-balance">
+              {section.headline}
+            </h1>
+            <p className="mt-7 max-w-xl text-base md:text-lg text-background/70 leading-relaxed">
+              {section.description}
+            </p>
+            <div className="mt-10 flex flex-wrap gap-4">
+              {section.cta && (
+                <MagneticButton as="a" href={section.cta.href} strength={0.45}>
+                  <span className="inline-flex h-14 items-center bg-accent px-8 text-[12px] uppercase tracking-[0.22em] text-foreground transition-colors duration-500 hover:bg-background">
+                    {section.cta.label}
+                  </span>
+                </MagneticButton>
+              )}
+              {section.secondaryCta && (
+                <MagneticButton as="a" href={section.secondaryCta.href} strength={0.4}>
+                  <span className="inline-flex h-14 items-center border border-background/35 px-8 text-[12px] uppercase tracking-[0.22em] text-background transition-colors duration-500 hover:border-accent hover:text-accent">
+                    {section.secondaryCta.label}
+                  </span>
+                </MagneticButton>
+              )}
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'features' && (
+          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+            <div className="max-w-2xl">
+              <p className="mb-4 text-[11px] uppercase tracking-[0.35em] text-accent">{section.label}</p>
+              <h2 className="font-display text-[clamp(2.5rem,6vw,5rem)] text-background leading-[1.02]">
+                {section.title}
+              </h2>
+              <p className="mt-6 text-lg text-background/70 leading-relaxed max-w-xl">
+                {section.description}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {section.features?.map((feature) => (
+                <div key={feature} className="glass-dark rounded-2xl px-5 py-4 text-background">
+                  <p className="text-sm md:text-base leading-snug">{feature}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'editorial' && (
+          <div className="max-w-3xl ml-auto text-right">
+            <p className="mb-4 text-[11px] uppercase tracking-[0.35em] text-accent">{section.label}</p>
+            <h2 className="font-display text-[clamp(2.8rem,7vw,5.5rem)] text-background leading-[1.02]">
+              {section.title}
+            </h2>
+            <p className="mt-6 text-lg text-background/70 leading-relaxed ml-auto max-w-lg">
+              {section.description}
+            </p>
+            <div className="mt-8 flex flex-wrap justify-end gap-3">
+              {section.features?.map((feature) => (
+                <span
+                  key={feature}
+                  className="glass-dark rounded-full px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-background/85"
+                >
+                  {feature}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'cards' && (
+          <div className="w-full max-w-6xl">
+            <p className="mb-4 text-[11px] uppercase tracking-[0.35em] text-accent">{section.label}</p>
+            <h2 className="font-display text-[clamp(2.5rem,6vw,5rem)] text-background mb-8">
+              {section.title}
+            </h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+              {section.features?.map((feature, i) => (
+                <div
+                  key={feature}
+                  className="glass-dark flex h-full min-h-[140px] flex-col justify-between rounded-2xl p-5 text-background"
+                >
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-background/45">
+                    {String(i + 1).padStart(2, '0')}
+                  </p>
+                  <p className="font-display text-xl md:text-2xl leading-tight mt-6">{feature}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'list' && (
+          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+            <div>
+              <p className="mb-4 text-[11px] uppercase tracking-[0.35em] text-accent">{section.label}</p>
+              <h2 className="font-display text-[clamp(2.8rem,7vw,5.5rem)] text-background leading-[1.02]">
+                {section.headline ?? section.title}
+              </h2>
+              <p className="mt-6 text-lg text-background/70 leading-relaxed max-w-lg">
+                {section.description}
+              </p>
+            </div>
+            <ul className="space-y-0 border-t border-background/15">
+              {section.features?.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-center justify-between border-b border-background/15 py-4 text-background"
+                >
+                  <span className="font-display text-2xl md:text-3xl">{feature}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {section.variant === 'experience' && (
+          <div className="max-w-2xl">
+            <div className="glass-dark rounded-3xl p-8 md:p-10 text-background">
+              <p className="mb-4 text-[11px] uppercase tracking-[0.35em] text-accent">{section.label}</p>
+              <h2 className="font-display text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.02]">
+                {section.title}
+              </h2>
+              <p className="mt-6 text-background/70 leading-relaxed">{section.description}</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {section.features?.map((feature) => (
+                  <span
+                    key={feature}
+                    className="rounded-full border border-background/20 px-4 py-2 text-[11px] uppercase tracking-[0.16em]"
+                  >
+                    {feature}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'finale' && (
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="mb-5 text-[11px] uppercase tracking-[0.35em] text-accent">{section.label}</p>
+            <h2 className="font-display text-[clamp(2.8rem,7vw,5.5rem)] text-background leading-[1.02] text-balance">
+              {section.headline ?? section.title}
+            </h2>
+            <p className="mt-7 text-lg text-background/70 leading-relaxed mx-auto max-w-xl">
+              {section.description}
+            </p>
+            {section.cta && (
+              <div className="mt-10 flex justify-center">
+                <MagneticButton as="a" href={section.cta.href} strength={0.45}>
+                  <span className="inline-flex h-14 items-center bg-accent px-10 text-[12px] uppercase tracking-[0.22em] text-foreground transition-colors duration-500 hover:bg-background">
+                    {section.cta.label}
+                  </span>
+                </MagneticButton>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LoadingScreen({ progress, visible }: { progress: number; visible: boolean }) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0c0c0c] text-background"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] } }}
+        >
+          <p className="font-display text-3xl md:text-5xl tracking-tight">Luxury Home Builder</p>
+          <p className="mt-3 text-[11px] uppercase tracking-[0.35em] text-background/50">
+            Preparing cinematic walkthrough
+          </p>
+          <div className="mt-12 h-px w-48 overflow-hidden bg-background/15">
+            <div
+              className="h-full origin-left bg-accent transition-transform duration-300 ease-out"
+              style={{ transform: `scaleX(${Math.max(0.04, progress)})` }}
+            />
+          </div>
+          <p className="mt-4 text-[11px] tracking-[0.2em] text-background/40">
+            {Math.round(progress * 100)}%
+          </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+function applyOverlayFade(el: HTMLDivElement | null, local: number) {
+  if (!el) return
+  let opacity = 1
+  if (local < 0.04) opacity = 0.55 + (local / 0.04) * 0.45
+  else if (local > 0.92) opacity = Math.max(0.35, (1 - local) / 0.08)
+  el.style.opacity = String(opacity)
+}
+
+function safeTime(duration: number, local: number) {
+  if (!Number.isFinite(duration) || duration <= 0) return 0.001
+  const max = Math.max(duration - 0.05, 0.001)
+  return Math.min(Math.max(local, 0), 1) * max
+}
+
+async function unlockVideo(video: HTMLVideoElement) {
+  video.muted = true
+  video.playsInline = true
+  try {
+    await video.play()
+  } catch {
+    /* muted autoplay */
+  }
+  video.pause()
+  try {
+    video.currentTime = 0.001
+  } catch {
+    /* ignore */
+  }
+  await new Promise<void>((resolve) => {
+    if (video.readyState >= 2) {
+      resolve()
+      return
+    }
+    const done = () => resolve()
+    video.addEventListener('loadeddata', done, { once: true })
+    video.addEventListener('seeked', done, { once: true })
+    window.setTimeout(done, 2000)
+  })
+}
+
+export function VideoScrollSequence({
+  videos,
+  scrollVhPerSection = 300,
+  objectFit = 'cover',
+  preloadStrategy = 'adjacent',
+  className,
+  onReady,
+  onSectionChange,
+}: VideoScrollSequenceProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const pinRef = useRef<HTMLDivElement>(null)
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+  const fadeRef = useRef<HTMLDivElement | null>(null)
+  const progressBarRef = useRef<HTMLDivElement>(null)
+  const counterRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<ScrollTrigger | null>(null)
+
+  /** Scroll-driven target on a continuous 0→N timeline */
+  const targetUnitRef = useRef(0)
+  /** Smoothed unit that lerps toward the target every frame */
+  const smoothUnitRef = useRef(0)
+  const activeIndexRef = useRef(0)
+  const readyRef = useRef(false)
+  const contentVisibleRef = useRef(false)
+  const lastUiIndexRef = useRef(-1)
+
+  const [ready, setReady] = useState(false)
+  const [loadProgress, setLoadProgress] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [contentVisible, setContentVisible] = useState(false)
+
+  const reduced = usePrefersReducedMotion()
+
+  const setVisibleVideo = (index: number) => {
+    videoRefs.current.forEach((video, i) => {
+      if (!video) return
+      const on = i === index
+      video.style.opacity = on ? '1' : '0'
+      video.style.zIndex = on ? '2' : '1'
+    })
+  }
+
+  const syncUnit = (unit: number, immediate = false) => {
+    const count = videos.length
+    const clamped = Math.min(Math.max(unit, 0), count - 0.0001)
+    targetUnitRef.current = clamped
+    if (immediate || Math.abs(clamped - smoothUnitRef.current) > 0.6) {
+      smoothUnitRef.current = clamped
+    }
+  }
+
+  const skipWalkthrough = () => {
+    const count = videos.length
+    // Jump scrubber to the end so reverse-entry never flashes frame 01
+    syncUnit(count - 0.0001, true)
+
+    const about = document.getElementById('about')
+    const lenis = window.__lenis
+    if (about) {
+      if (lenis) lenis.scrollTo(about, { offset: -20, duration: 1.4 })
+      else about.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    const st = triggerRef.current
+    if (st && lenis) lenis.scrollTo(st.end + 40, { duration: 1.4 })
+    else if (st) window.scrollTo({ top: st.end + 40, behavior: 'smooth' })
+  }
+
+  // Preload
+  useEffect(() => {
+    let cancelled = false
+    const vids = videoRefs.current.filter(Boolean) as HTMLVideoElement[]
+    if (!vids.length) return
+
+    vids.forEach((video, i) => {
+      video.muted = true
+      video.playsInline = true
+      video.preload = preloadStrategy === 'all' || i <= 1 ? 'auto' : 'metadata'
+      video.pause()
+    })
+
+    const boot = async () => {
+      setLoadProgress(0.2)
+      const first = vids[0]
+      if (first) {
+        await new Promise<void>((resolve) => {
+          if (first.readyState >= 2) resolve()
+          else {
+            first.addEventListener('loadeddata', () => resolve(), { once: true })
+            first.addEventListener('canplay', () => resolve(), { once: true })
+            window.setTimeout(() => resolve(), 8000)
+          }
+        })
+        if (cancelled) return
+        setLoadProgress(0.55)
+        await unlockVideo(first)
+        if (cancelled) return
+        setVisibleVideo(0)
+        setLoadProgress(0.85)
+      }
+
+      // Always begin the cinematic sequence at frame 0 / scroll 0
+      targetUnitRef.current = 0
+      smoothUnitRef.current = 0
+      activeIndexRef.current = 0
+      lastUiIndexRef.current = 0
+      contentVisibleRef.current = false
+      setContentVisible(false)
+      setActiveIndex(0)
+      setVisibleVideo(0)
+      if (first) {
+        try {
+          first.currentTime = 0.001
+        } catch {
+          /* ignore */
+        }
+      }
+
+      window.scrollTo(0, 0)
+      window.__lenis?.scrollTo(0, { immediate: true })
+
+      if (!readyRef.current) {
+        readyRef.current = true
+        setReady(true)
+        setLoadProgress(1)
+        onReady?.()
+      }
+
+      vids.slice(1).forEach((video, offset) => {
+        window.setTimeout(() => {
+          if (cancelled) return
+          void unlockVideo(video)
+          video.style.opacity = '0'
+        }, 300 * (offset + 1))
+      })
+    }
+
+    void boot()
+
+    const timeout = window.setTimeout(() => {
+      if (cancelled || readyRef.current) return
+      readyRef.current = true
+      setReady(true)
+      setLoadProgress(1)
+      onReady?.()
+      setVisibleVideo(0)
+    }, 12000)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+    }
+  }, [videos, preloadStrategy, onReady])
+
+  // Smooth lerp loop — runs on GSAP ticker (synced with Lenis)
+  useEffect(() => {
+    if (!ready) return
+    const count = videos.length
+
+    const tick = () => {
+      const target = targetUnitRef.current
+      const current = smoothUnitRef.current
+      const delta = target - current
+
+      // Snap on large gaps (skip / footer jump) so frame 01 never flashes on re-entry
+      if (Math.abs(delta) > 0.6) {
+        smoothUnitRef.current = target
+      } else {
+        const ease = Math.abs(delta) > 0.35 ? 0.28 : 0.16
+        const next = current + delta * ease
+        smoothUnitRef.current = Math.abs(delta) < 0.0004 ? target : next
+      }
+
+      const unit = Math.min(Math.max(smoothUnitRef.current, 0), count - 0.0001)
+      const index = Math.min(Math.floor(unit), count - 1)
+      const local = unit - index
+      const video = videoRefs.current[index]
+
+      if (index !== activeIndexRef.current) {
+        const prev = activeIndexRef.current
+        const prevVideo = videoRefs.current[prev]
+        const nextVideo = videoRefs.current[index]
+
+        // Pre-seek the destination clip to the matching seam, then reveal it
+        if (nextVideo && Number.isFinite(nextVideo.duration)) {
+          const seam = index > prev ? 0.001 : safeTime(nextVideo.duration, 0.999)
+          if (Math.abs(nextVideo.currentTime - seam) > 0.02) {
+            try {
+              nextVideo.currentTime = seam
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+
+        setVisibleVideo(index)
+        if (prevVideo && prev !== index) prevVideo.style.opacity = '0'
+
+        activeIndexRef.current = index
+        if (lastUiIndexRef.current !== index) {
+          lastUiIndexRef.current = index
+          setActiveIndex(index)
+          onSectionChange?.(index)
+        }
+
+        // Warm neighbors
+        const ahead = videoRefs.current[index + 1]
+        const behind = videoRefs.current[index - 1]
+        if (ahead) ahead.preload = 'auto'
+        if (behind) behind.preload = 'auto'
+      }
+
+      if (video && Number.isFinite(video.duration) && video.duration > 0) {
+        const desired = safeTime(video.duration, local)
+        // Dense keyframes (~every 3 frames) let us drive currentTime every tick
+        if (Math.abs(video.currentTime - desired) > 0.012) {
+          try {
+            video.currentTime = desired
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+
+      applyOverlayFade(fadeRef.current, local)
+
+      const overall = unit / count
+      if (progressBarRef.current) progressBarRef.current.style.width = `${overall * 100}%`
+      if (counterRef.current) {
+        counterRef.current.textContent = `Scroll to explore · ${String(index + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`
+      }
+    }
+
+    gsap.ticker.add(tick)
+    return () => {
+      gsap.ticker.remove(tick)
+    }
+  }, [ready, videos.length, onSectionChange])
+
+  // ScrollTrigger only writes the target unit — never seeks directly
+  useEffect(() => {
+    if (!ready || !containerRef.current || !pinRef.current || reduced) return
+
+    const count = videos.length
+
+    // Ensure load/refresh always starts at the beginning of the walkthrough
+    targetUnitRef.current = 0
+    smoothUnitRef.current = 0
+    contentVisibleRef.current = false
+    setContentVisible(false)
+    setActiveIndex(0)
+    setVisibleVideo(0)
+    window.scrollTo(0, 0)
+    window.__lenis?.scrollTo(0, { immediate: true })
+
+    const applyProgress = (progress: number, forceSnap = false) => {
+      const unit = progress * count
+      targetUnitRef.current = unit
+      if (forceSnap || Math.abs(unit - smoothUnitRef.current) > 0.6) {
+        smoothUnitRef.current = Math.min(Math.max(unit, 0), count - 0.0001)
+      }
+
+      // Resting at the top = video only (no hero copy). Re-show after scroll.
+      const show = progress > 0.012
+      if (contentVisibleRef.current !== show) {
+        contentVisibleRef.current = show
+        setContentVisible(show)
+      }
+    }
+
+    const ctx = gsap.context(() => {
+      triggerRef.current = ScrollTrigger.create({
+        id: 'walkthrough-sequence',
+        trigger: containerRef.current,
+        pin: pinRef.current,
+        scrub: true,
+        start: 'top top',
+        end: () => `+=${count * window.innerHeight * (scrollVhPerSection / 100)}`,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          applyProgress(self.progress)
+        },
+        // Re-entering from below (footer → up) must match end frame immediately
+        onEnterBack: (self) => {
+          applyProgress(self.progress, true)
+        },
+        onEnter: (self) => {
+          applyProgress(self.progress, true)
+        },
+        onRefresh: (self) => {
+          applyProgress(self.progress, true)
+        },
+      })
+    }, containerRef)
+
+    const refreshId = window.setTimeout(() => {
+      window.scrollTo(0, 0)
+      window.__lenis?.scrollTo(0, { immediate: true })
+      targetUnitRef.current = 0
+      smoothUnitRef.current = 0
+      ScrollTrigger.refresh()
+    }, 100)
+
+    return () => {
+      window.clearTimeout(refreshId)
+      triggerRef.current = null
+      ctx.revert()
+    }
+  }, [ready, videos.length, scrollVhPerSection, reduced])
+
+  useEffect(() => {
+    if (!reduced || !ready) return
+    contentVisibleRef.current = true
+    setContentVisible(true)
+    applyOverlayFade(fadeRef.current, 0.5)
+  }, [reduced, ready])
+
+  useEffect(() => {
+    if (!ready || !contentVisible) return
+    const id = window.requestAnimationFrame(() => applyOverlayFade(fadeRef.current, 0.3))
+    return () => window.cancelAnimationFrame(id)
+  }, [activeIndex, ready, contentVisible])
+
+  return (
+    <>
+      <LoadingScreen progress={loadProgress} visible={!ready} />
+
+      <section
+        ref={containerRef}
+        id="walkthrough"
+        className={cn('relative bg-[#0c0c0c]', className)}
+        aria-label="Cinematic home walkthrough"
+      >
+        <div ref={pinRef} className="relative h-screen w-full overflow-hidden bg-[#0c0c0c]">
+          <div className="absolute inset-0 bg-[#121212]">
+            {videos.map((section, i) => (
+              <video
+                key={`${section.id}-smooth`}
+                ref={(el) => {
+                  videoRefs.current[i] = el
+                }}
+                src={section.src}
+                className="absolute inset-0 h-full w-full will-change-[opacity]"
+                style={{
+                  objectFit,
+                  opacity: i === 0 ? 1 : 0,
+                  zIndex: i === 0 ? 2 : 1,
+                  transform: 'translateZ(0)',
+                  backgroundColor: '#121212',
+                }}
+                muted
+                playsInline
+                preload={i <= 1 ? 'auto' : 'metadata'}
+                disablePictureInPicture
+                controls={false}
+                tabIndex={-1}
+                aria-hidden={i !== activeIndex}
+              />
+            ))}
+
+            <div className="pointer-events-none absolute inset-0 z-[4] bg-gradient-to-b from-black/35 via-black/10 to-black/45" />
+            <div className="pointer-events-none absolute inset-0 z-[4] bg-gradient-to-r from-black/25 via-transparent to-black/15" />
+          </div>
+
+          <AnimatePresence mode="wait">
+            {contentVisible && videos[activeIndex] && (
+              <motion.div
+                key={videos[activeIndex].id}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-0 z-10"
+              >
+                <OverlayContent
+                  section={videos[activeIndex]}
+                  fadeRef={fadeRef}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="absolute bottom-0 left-0 right-0 z-20 h-[2px] bg-background/10">
+            <div ref={progressBarRef} className="h-full w-0 bg-accent" />
+          </div>
+
+          <div className="absolute bottom-5 left-0 right-0 z-20 flex items-center justify-between gap-4 px-5 md:px-10">
+            <div
+              ref={counterRef}
+              className="text-[10px] uppercase tracking-[0.28em] text-background/45"
+            >
+              Scroll to explore · 01 / {String(videos.length).padStart(2, '0')}
+            </div>
+
+            <button
+              type="button"
+              onClick={skipWalkthrough}
+              className="group inline-flex items-center gap-2 border border-background/25 bg-background/10 px-4 py-2.5 text-[10px] uppercase tracking-[0.22em] text-background/85 backdrop-blur-md transition-all duration-500 hover:border-accent hover:bg-accent hover:text-foreground cursor-pointer"
+            >
+              Skip Scroll
+              <ChevronsDown className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-y-0.5" />
+            </button>
+          </div>
+        </div>
+
+        {reduced && (
+          <div className="relative z-10 bg-background px-5 py-24 md:px-10">
+            {videos.map((section) => (
+              <div key={section.id} className="mb-16 max-w-3xl">
+                <p className="text-accent text-[11px] uppercase tracking-[0.3em] mb-3">{section.label}</p>
+                <h2 className="font-display text-4xl">{section.title}</h2>
+                <p className="mt-4 text-muted">{section.description}</p>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={skipWalkthrough}
+              className="mt-4 text-sm uppercase tracking-[0.2em] text-accent"
+            >
+              Continue to site
+            </button>
+          </div>
+        )}
+      </section>
+    </>
+  )
+}
