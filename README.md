@@ -1,4 +1,4 @@
-# Dream Home Builders NJ
+# Dream Home Builder
 
 Premium luxury construction company website — cinematic scroll storytelling, GSAP ScrollTrigger, Lenis smooth scroll, and Framer Motion micro-interactions.
 

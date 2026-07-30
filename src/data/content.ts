@@ -1,11 +1,11 @@
 export const siteConfig = {
-  name: 'Luxury Home Builder',
+  name: 'Dream Home Builder',
   tagline: 'Building excellence since 2015.',
   description:
     'Award-caliber custom luxury home construction across New Jersey. From architectural vision to finished estate — crafted with precision, integrity, and timeless design.',
-  url: 'https://luxuryhomebuilder.com',
+  url: 'https://dreamhomebuilder.com',
   phone: '(908) 797-1777',
-  email: 'hello@luxuryhomebuilder.com',
+  email: 'hello@dreamhomebuilder.com',
   address: '25 Parker Rd, Edison NJ 08820',
   hours: 'Mon - Fri: 9am - 6pm',
   founded: 2015,
@@ -38,7 +38,7 @@ export const footerQuickLinks = [
 export const footerContactLinks = [
   { label: 'Call Us', href: 'tel:+19087971777' },
   { label: 'Send A Quick Note', href: '#contact' },
-  { label: 'Email Us', href: 'mailto:hello@luxuryhomebuilder.com' },
+  { label: 'Email Us', href: 'mailto:hello@dreamhomebuilder.com' },
   { label: '25 Parker Rd, Edison NJ 08820', href: 'https://maps.google.com/?q=25+Parker+Rd,+Edison+NJ+08820' },
 ]
 

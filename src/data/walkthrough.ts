@@ -22,7 +22,7 @@ export const walkthroughSections: WalkthroughSection[] = [
     src: '/videos/01-elevation.mp4?v=smooth3',
     label: '01 — Elevations',
     title: 'Elevations',
-    headline: 'Building Luxury Homes Across New Jersey',
+    headline: 'Building Dream Homes Across New Jersey',
     description:
       'A continuous cinematic journey through a custom luxury residence — controlled entirely by your scroll.',
     cta: { label: 'Start Your Vision', href: '#contact' },

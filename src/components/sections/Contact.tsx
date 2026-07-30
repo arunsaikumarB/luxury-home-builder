@@ -86,7 +86,7 @@ export function Contact() {
               {tab === 'in-person' && (
                 <div className="mt-8 overflow-hidden rounded-xl border border-foreground/10 bg-card shadow-sm">
                   <iframe
-                    title="Luxury Home Builder office map"
+                    title="Dream Home Builder office map"
                     src={siteConfig.mapEmbedUrl}
                     className="h-64 w-full border-0 md:h-72"
                     loading="lazy"

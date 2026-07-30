@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-3 md:gap-10">
           <div>
             <h2 className="font-display text-3xl md:text-4xl leading-none">
-              Luxury Home
+              Dream Home
               <span className="text-accent"> Builder</span>
             </h2>
             <p className="mt-4 text-background/70">{siteConfig.tagline}</p>

@@ -57,7 +57,7 @@ export function About() {
             </h2>
             <Reveal delay={0.15}>
               <p className="mt-8 text-lg text-muted leading-relaxed max-w-xl">
-                Luxury Home Builder is a luxury construction atelier specializing in custom
+                Dream Home Builder is a luxury construction atelier specializing in custom
                 residences that feel cinematic yet deeply personal. We unite architects, artisans,
                 and project directors around one standard: every home should feel inevitable.
               </p>

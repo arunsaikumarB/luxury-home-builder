@@ -45,7 +45,7 @@ export function Navbar() {
               scrolled ? 'scale-95 text-foreground' : 'text-background',
             )}
           >
-            Luxury Home Builder
+            Dream Home Builder
             <span className="text-accent">.</span>
           </a>
 
@@ -110,7 +110,7 @@ export function Navbar() {
             <div className="flex h-full flex-col px-6 py-6 md:px-10">
               <div className="flex items-center justify-between">
                 <span className="font-display text-3xl">
-                  Luxury Home Builder<span className="text-accent">.</span>
+                  Dream Home Builder<span className="text-accent">.</span>
                 </span>
                 <button
                   type="button"
