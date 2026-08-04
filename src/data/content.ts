@@ -29,7 +29,6 @@ export const navLinks = [
   { label: 'Projects', href: '#projects' },
   { label: 'Process', href: '#process' },
   { label: 'Contact', href: '#contact' },
-  { label: 'Quote', href: '#quote' },
 ]
 
 export const footerQuickLinks = [

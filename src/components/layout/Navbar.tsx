@@ -69,7 +69,7 @@ export function Navbar() {
           </nav>
 
           <div className="hidden lg:block">
-            <MagneticButton as="a" href="#contact" strength={0.4}>
+            <MagneticButton as="a" href="#quote" strength={0.4}>
               <span
                 className={cn(
                   'inline-flex h-11 items-center px-6 text-[12px] uppercase tracking-[0.2em] transition-colors duration-500',
@@ -78,7 +78,7 @@ export function Navbar() {
                     : 'bg-accent text-foreground hover:bg-background',
                 )}
               >
-                Start a Project
+                Request Quote
               </span>
             </MagneticButton>
           </div>
@@ -138,6 +138,17 @@ export function Navbar() {
                     {link.label}
                   </motion.a>
                 ))}
+                <motion.a
+                  href="#quote"
+                  onClick={() => setOpen(false)}
+                  className="mt-4 inline-flex w-fit bg-accent px-6 py-3 text-[12px] uppercase tracking-[0.2em] text-foreground"
+                  initial={{ y: 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 + navLinks.length * 0.08, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  data-cursor="hover"
+                >
+                  Request Quote
+                </motion.a>
               </nav>
 
               <div className="mt-auto pb-8 text-sm text-background/60">
