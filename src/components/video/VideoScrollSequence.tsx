@@ -258,7 +258,7 @@ async function unlockVideo(video: HTMLVideoElement) {
   }
   video.pause()
   try {
-    video.currentTime = 0.001
+    if (!video.seeking) video.currentTime = 0.001
   } catch {
     /* ignore */
   }
@@ -270,8 +270,20 @@ async function unlockVideo(video: HTMLVideoElement) {
     const done = () => resolve()
     video.addEventListener('loadeddata', done, { once: true })
     video.addEventListener('seeked', done, { once: true })
-    window.setTimeout(done, 2000)
+    window.setTimeout(done, 2500)
   })
+}
+
+function seekVideo(video: HTMLVideoElement, time: number, minDelta = 0.04) {
+  if (!Number.isFinite(video.duration) || video.duration <= 0) return
+  if (video.seeking || video.readyState < 2) return
+  const desired = Math.min(Math.max(time, 0.001), Math.max(video.duration - 0.05, 0.001))
+  if (Math.abs(video.currentTime - desired) < minDelta) return
+  try {
+    video.currentTime = desired
+  } catch {
+    /* ignore */
+  }
 }
 
 export function VideoScrollSequence({
@@ -299,6 +311,8 @@ export function VideoScrollSequence({
   const readyRef = useRef(false)
   const contentVisibleRef = useRef(false)
   const lastUiIndexRef = useRef(-1)
+  const lastSeekMsRef = useRef(0)
+  const warmedRef = useRef<Set<number>>(new Set())
 
   const [ready, setReady] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
@@ -351,7 +365,7 @@ export function VideoScrollSequence({
     vids.forEach((video, i) => {
       video.muted = true
       video.playsInline = true
-      video.preload = preloadStrategy === 'all' || i <= 1 ? 'auto' : 'metadata'
+      video.preload = i === 0 ? 'auto' : 'metadata'
       video.pause()
     })
 
@@ -370,6 +384,7 @@ export function VideoScrollSequence({
         if (cancelled) return
         setLoadProgress(0.55)
         await unlockVideo(first)
+        warmedRef.current.add(0)
         if (cancelled) return
         setVisibleVideo(0)
         setLoadProgress(0.85)
@@ -384,13 +399,7 @@ export function VideoScrollSequence({
       setContentVisible(false)
       setActiveIndex(0)
       setVisibleVideo(0)
-      if (first) {
-        try {
-          first.currentTime = 0.001
-        } catch {
-          /* ignore */
-        }
-      }
+      if (first) seekVideo(first, 0.001, 0)
 
       if (!hasDeepLinkHash()) {
         window.scrollTo(0, 0)
@@ -404,13 +413,16 @@ export function VideoScrollSequence({
         onReady?.()
       }
 
-      vids.slice(1).forEach((video, offset) => {
+      // Only warm the next clip — loading all 7 at once stalls scrubbing on Azure
+      const second = vids[1]
+      if (second) {
         window.setTimeout(() => {
-          if (cancelled) return
-          void unlockVideo(video)
-          video.style.opacity = '0'
-        }, 300 * (offset + 1))
-      })
+          if (cancelled || warmedRef.current.has(1)) return
+          warmedRef.current.add(1)
+          void unlockVideo(second)
+          second.style.opacity = '0'
+        }, 400)
+      }
     }
 
     void boot()
@@ -459,16 +471,9 @@ export function VideoScrollSequence({
         const prevVideo = videoRefs.current[prev]
         const nextVideo = videoRefs.current[index]
 
-        // Pre-seek the destination clip to the matching seam, then reveal it
         if (nextVideo && Number.isFinite(nextVideo.duration)) {
           const seam = index > prev ? 0.001 : safeTime(nextVideo.duration, 0.999)
-          if (Math.abs(nextVideo.currentTime - seam) > 0.02) {
-            try {
-              nextVideo.currentTime = seam
-            } catch {
-              /* ignore */
-            }
-          }
+          seekVideo(nextVideo, seam, 0.02)
         }
 
         setVisibleVideo(index)
@@ -481,23 +486,21 @@ export function VideoScrollSequence({
           onSectionChange?.(index)
         }
 
-        // Warm neighbors
-        const ahead = videoRefs.current[index + 1]
-        const behind = videoRefs.current[index - 1]
-        if (ahead) ahead.preload = 'auto'
-        if (behind) behind.preload = 'auto'
+        // Warm neighbors lazily (avoid saturating Azure bandwidth)
+        ;[index + 1, index - 1].forEach((neighbor) => {
+          const clip = videoRefs.current[neighbor]
+          if (!clip || warmedRef.current.has(neighbor)) return
+          warmedRef.current.add(neighbor)
+          clip.preload = 'auto'
+          void unlockVideo(clip)
+        })
       }
 
-      if (video && Number.isFinite(video.duration) && video.duration > 0) {
-        const desired = safeTime(video.duration, local)
-        // Dense keyframes (~every 3 frames) let us drive currentTime every tick
-        if (Math.abs(video.currentTime - desired) > 0.012) {
-          try {
-            video.currentTime = desired
-          } catch {
-            /* ignore */
-          }
-        }
+      // Throttle seeks — network-backed mp4s stall hard if currentTime is set every frame
+      const now = performance.now()
+      if (video && now - lastSeekMsRef.current > 32) {
+        lastSeekMsRef.current = now
+        seekVideo(video, safeTime(video.duration, local), 0.05)
       }
 
       applyOverlayFade(fadeRef.current, local)
@@ -553,11 +556,12 @@ export function VideoScrollSequence({
         id: 'walkthrough-sequence',
         trigger: containerRef.current,
         pin: pinRef.current,
-        scrub: true,
+        scrub: 0.35,
         start: 'top top',
         end: () => `+=${count * window.innerHeight * (scrollVhPerSection / 100)}`,
         anticipatePin: 1,
         invalidateOnRefresh: true,
+        fastScrollEnd: true,
         onUpdate: (self) => {
           applyProgress(self.progress)
         },
@@ -584,8 +588,17 @@ export function VideoScrollSequence({
       ScrollTrigger.refresh()
     }, 100)
 
+    const lateRefreshIds = [400, 1200].map((ms) =>
+      window.setTimeout(() => ScrollTrigger.refresh(), ms),
+    )
+
+    const onLoad = () => ScrollTrigger.refresh()
+    window.addEventListener('load', onLoad)
+
     return () => {
       window.clearTimeout(refreshId)
+      lateRefreshIds.forEach((id) => window.clearTimeout(id))
+      window.removeEventListener('load', onLoad)
       triggerRef.current = null
       ctx.revert()
     }

@@ -40,11 +40,13 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     }
 
     const lenis = new Lenis({
-      duration: 1.15,
+      autoRaf: false,
+      duration: 1.05,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      wheelMultiplier: 0.85,
-      touchMultiplier: 1.2,
+      wheelMultiplier: 0.9,
+      touchMultiplier: 1.35,
+      syncTouch: false,
     })
 
     window.__lenis = lenis
@@ -59,6 +61,7 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
 
     const onResize = () => ScrollTrigger.refresh()
     window.addEventListener('resize', onResize)
+    window.addEventListener('load', onResize)
 
     const bootId = window.setTimeout(() => {
       ScrollTrigger.refresh()
@@ -68,11 +71,12 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
       } else {
         lenis.scrollTo(0, { immediate: true })
       }
-    }, 80)
+    }, 120)
 
     return () => {
       window.clearTimeout(bootId)
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('load', onResize)
       gsap.ticker.remove(ticker)
       if (window.__lenis === lenis) delete window.__lenis
       lenis.destroy()
