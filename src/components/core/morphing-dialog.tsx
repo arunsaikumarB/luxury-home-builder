@@ -163,7 +163,6 @@ function MorphingDialogContent({ children, className, style }: MorphingDialogCon
   useEffect(() => {
     if (isOpen) {
       document.body.classList.add('overflow-hidden')
-      window.__lenis?.stop()
 
       const focusableElements = containerRef.current?.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -177,13 +176,11 @@ function MorphingDialogContent({ children, className, style }: MorphingDialogCon
       }
     } else {
       document.body.classList.remove('overflow-hidden')
-      window.__lenis?.start()
       triggerRef.current?.focus()
     }
 
     return () => {
       document.body.classList.remove('overflow-hidden')
-      window.__lenis?.start()
     }
   }, [isOpen, triggerRef])
 

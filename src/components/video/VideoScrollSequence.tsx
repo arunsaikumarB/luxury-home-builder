@@ -339,21 +339,69 @@ export function VideoScrollSequence({
     }
   }
 
+  const applyUnitToVideos = (unitRaw: number, force = false) => {
+    const count = videos.length
+    const unit = Math.min(Math.max(unitRaw, 0), count - 0.0001)
+    const index = Math.min(Math.floor(unit), count - 1)
+    const local = unit - index
+    const video = videoRefs.current[index]
+
+    if (index !== activeIndexRef.current) {
+      const prev = activeIndexRef.current
+      const prevVideo = videoRefs.current[prev]
+      const nextVideo = videoRefs.current[index]
+
+      if (nextVideo && Number.isFinite(nextVideo.duration)) {
+        const seam = index > prev ? 0.001 : safeTime(nextVideo.duration, 0.999)
+        seekVideo(nextVideo, seam, 0.02)
+      }
+
+      setVisibleVideo(index)
+      if (prevVideo && prev !== index) prevVideo.style.opacity = '0'
+
+      activeIndexRef.current = index
+      if (lastUiIndexRef.current !== index) {
+        lastUiIndexRef.current = index
+        setActiveIndex(index)
+        onSectionChange?.(index)
+      }
+
+      ;[index + 1, index - 1].forEach((neighbor) => {
+        const clip = videoRefs.current[neighbor]
+        if (!clip || warmedRef.current.has(neighbor)) return
+        warmedRef.current.add(neighbor)
+        clip.preload = 'auto'
+        void unlockVideo(clip)
+      })
+    }
+
+    const now = performance.now()
+    if (video && (force || now - lastSeekMsRef.current > 90)) {
+      lastSeekMsRef.current = now
+      seekVideo(video, safeTime(video.duration || 1, local), 0.12)
+    }
+
+    applyOverlayFade(fadeRef.current, local)
+
+    const overall = unit / count
+    if (progressBarRef.current) progressBarRef.current.style.width = `${overall * 100}%`
+    if (counterRef.current) {
+      counterRef.current.textContent = `Scroll to explore · ${String(index + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`
+    }
+  }
+
   const skipWalkthrough = () => {
     const count = videos.length
-    // Jump scrubber to the end so reverse-entry never flashes frame 01
     syncUnit(count - 0.0001, true)
+    applyUnitToVideos(count - 0.0001, true)
 
     const about = document.getElementById('about')
-    const lenis = window.__lenis
     if (about) {
-      if (lenis) lenis.scrollTo(about, { offset: -20, duration: 1.4 })
-      else about.scrollIntoView({ behavior: 'smooth' })
+      about.scrollIntoView({ behavior: 'smooth' })
       return
     }
     const st = triggerRef.current
-    if (st && lenis) lenis.scrollTo(st.end + 40, { duration: 1.4 })
-    else if (st) window.scrollTo({ top: st.end + 40, behavior: 'smooth' })
+    if (st) window.scrollTo({ top: st.end + 40, behavior: 'smooth' })
   }
 
   // Preload
@@ -403,7 +451,6 @@ export function VideoScrollSequence({
 
       if (!hasDeepLinkHash()) {
         window.scrollTo(0, 0)
-        window.__lenis?.scrollTo(0, { immediate: true })
       }
 
       if (!readyRef.current) {
@@ -442,89 +489,12 @@ export function VideoScrollSequence({
     }
   }, [videos, preloadStrategy, onReady])
 
-  // Smooth lerp loop — runs on GSAP ticker (synced with Lenis)
-  useEffect(() => {
-    if (!ready) return
-    const count = videos.length
-
-    const tick = () => {
-      const target = targetUnitRef.current
-      const current = smoothUnitRef.current
-      const delta = target - current
-
-      // Snap on large gaps (skip / footer jump) so frame 01 never flashes on re-entry
-      if (Math.abs(delta) > 0.6) {
-        smoothUnitRef.current = target
-      } else {
-        const ease = Math.abs(delta) > 0.35 ? 0.28 : 0.16
-        const next = current + delta * ease
-        smoothUnitRef.current = Math.abs(delta) < 0.0004 ? target : next
-      }
-
-      const unit = Math.min(Math.max(smoothUnitRef.current, 0), count - 0.0001)
-      const index = Math.min(Math.floor(unit), count - 1)
-      const local = unit - index
-      const video = videoRefs.current[index]
-
-      if (index !== activeIndexRef.current) {
-        const prev = activeIndexRef.current
-        const prevVideo = videoRefs.current[prev]
-        const nextVideo = videoRefs.current[index]
-
-        if (nextVideo && Number.isFinite(nextVideo.duration)) {
-          const seam = index > prev ? 0.001 : safeTime(nextVideo.duration, 0.999)
-          seekVideo(nextVideo, seam, 0.02)
-        }
-
-        setVisibleVideo(index)
-        if (prevVideo && prev !== index) prevVideo.style.opacity = '0'
-
-        activeIndexRef.current = index
-        if (lastUiIndexRef.current !== index) {
-          lastUiIndexRef.current = index
-          setActiveIndex(index)
-          onSectionChange?.(index)
-        }
-
-        // Warm neighbors lazily (avoid saturating Azure bandwidth)
-        ;[index + 1, index - 1].forEach((neighbor) => {
-          const clip = videoRefs.current[neighbor]
-          if (!clip || warmedRef.current.has(neighbor)) return
-          warmedRef.current.add(neighbor)
-          clip.preload = 'auto'
-          void unlockVideo(clip)
-        })
-      }
-
-      // Throttle seeks — network-backed mp4s stall hard if currentTime is set every frame
-      const now = performance.now()
-      if (video && now - lastSeekMsRef.current > 32) {
-        lastSeekMsRef.current = now
-        seekVideo(video, safeTime(video.duration, local), 0.05)
-      }
-
-      applyOverlayFade(fadeRef.current, local)
-
-      const overall = unit / count
-      if (progressBarRef.current) progressBarRef.current.style.width = `${overall * 100}%`
-      if (counterRef.current) {
-        counterRef.current.textContent = `Scroll to explore · ${String(index + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`
-      }
-    }
-
-    gsap.ticker.add(tick)
-    return () => {
-      gsap.ticker.remove(tick)
-    }
-  }, [ready, videos.length, onSectionChange])
-
-  // ScrollTrigger only writes the target unit — never seeks directly
+  // Native ScrollTrigger drives scrub — no Lenis, no 60fps seek ticker
   useEffect(() => {
     if (!ready || !containerRef.current || !pinRef.current || reduced) return
 
     const count = videos.length
 
-    // Ensure load/refresh always starts at the beginning of the walkthrough
     targetUnitRef.current = 0
     smoothUnitRef.current = 0
     contentVisibleRef.current = false
@@ -533,22 +503,24 @@ export function VideoScrollSequence({
     setVisibleVideo(0)
     if (!hasDeepLinkHash()) {
       window.scrollTo(0, 0)
-      window.__lenis?.scrollTo(0, { immediate: true })
     }
 
     const applyProgress = (progress: number, forceSnap = false) => {
       const unit = progress * count
       targetUnitRef.current = unit
-      if (forceSnap || Math.abs(unit - smoothUnitRef.current) > 0.6) {
+      if (forceSnap || Math.abs(unit - smoothUnitRef.current) > 0.35) {
         smoothUnitRef.current = Math.min(Math.max(unit, 0), count - 0.0001)
+      } else {
+        smoothUnitRef.current += (unit - smoothUnitRef.current) * 0.35
       }
 
-      // Resting at the top = video only (no hero copy). Re-show after scroll.
       const show = progress > 0.012
       if (contentVisibleRef.current !== show) {
         contentVisibleRef.current = show
         setContentVisible(show)
       }
+
+      applyUnitToVideos(smoothUnitRef.current, forceSnap)
     }
 
     const ctx = gsap.context(() => {
@@ -556,16 +528,15 @@ export function VideoScrollSequence({
         id: 'walkthrough-sequence',
         trigger: containerRef.current,
         pin: pinRef.current,
-        scrub: 0.35,
+        scrub: true,
+        pinSpacing: true,
         start: 'top top',
-        end: () => `+=${count * window.innerHeight * (scrollVhPerSection / 100)}`,
-        anticipatePin: 1,
+        end: () => `+=${Math.round(count * window.innerHeight * (scrollVhPerSection / 100))}`,
         invalidateOnRefresh: true,
         fastScrollEnd: true,
         onUpdate: (self) => {
           applyProgress(self.progress)
         },
-        // Re-entering from below (footer → up) must match end frame immediately
         onEnterBack: (self) => {
           applyProgress(self.progress, true)
         },
@@ -581,14 +552,13 @@ export function VideoScrollSequence({
     const refreshId = window.setTimeout(() => {
       if (!hasDeepLinkHash()) {
         window.scrollTo(0, 0)
-        window.__lenis?.scrollTo(0, { immediate: true })
         targetUnitRef.current = 0
         smoothUnitRef.current = 0
       }
       ScrollTrigger.refresh()
     }, 100)
 
-    const lateRefreshIds = [400, 1200].map((ms) =>
+    const lateRefreshIds = [300, 900, 1800].map((ms) =>
       window.setTimeout(() => ScrollTrigger.refresh(), ms),
     )
 
@@ -602,7 +572,7 @@ export function VideoScrollSequence({
       triggerRef.current = null
       ctx.revert()
     }
-  }, [ready, videos.length, scrollVhPerSection, reduced])
+  }, [ready, videos.length, scrollVhPerSection, reduced, onSectionChange])
 
   useEffect(() => {
     if (!reduced || !ready) return

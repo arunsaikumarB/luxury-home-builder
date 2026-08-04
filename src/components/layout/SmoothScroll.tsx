@@ -1,16 +1,9 @@
 import { useEffect, type ReactNode } from 'react'
-import Lenis from 'lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { usePrefersReducedMotion } from '@/hooks/useMediaQuery'
+import { useIsTouch, usePrefersReducedMotion } from '@/hooks/useMediaQuery'
 
 gsap.registerPlugin(ScrollTrigger)
-
-declare global {
-  interface Window {
-    __lenis?: Lenis
-  }
-}
 
 function getSectionHash() {
   const hash = window.location.hash.replace(/^#/, '')
@@ -18,8 +11,10 @@ function getSectionHash() {
   return hash
 }
 
+/** Native scroll only — Lenis + pinned video scrub stuck the Azure deploy. */
 export function SmoothScroll({ children }: { children: ReactNode }) {
   const reduced = usePrefersReducedMotion()
+  const isTouch = useIsTouch()
 
   useEffect(() => {
     if ('scrollRestoration' in history) {
@@ -28,60 +23,38 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
 
     const sectionHash = getSectionHash()
 
-    if (reduced) {
-      if (sectionHash) {
-        window.requestAnimationFrame(() => {
-          document.getElementById(sectionHash)?.scrollIntoView()
-        })
-      } else {
-        window.scrollTo(0, 0)
-      }
-      return
-    }
-
-    const lenis = new Lenis({
-      autoRaf: false,
-      duration: 1.05,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      wheelMultiplier: 0.9,
-      touchMultiplier: 1.35,
-      syncTouch: false,
-    })
-
-    window.__lenis = lenis
-    lenis.on('scroll', ScrollTrigger.update)
-
-    const ticker = (time: number) => {
-      lenis.raf(time * 1000)
-    }
-
-    gsap.ticker.add(ticker)
-    gsap.ticker.lagSmoothing(0)
-
-    const onResize = () => ScrollTrigger.refresh()
-    window.addEventListener('resize', onResize)
-    window.addEventListener('load', onResize)
-
-    const bootId = window.setTimeout(() => {
-      ScrollTrigger.refresh()
+    const refresh = () => ScrollTrigger.refresh()
+    const go = () => {
+      refresh()
       if (sectionHash) {
         const el = document.getElementById(sectionHash)
-        if (el) lenis.scrollTo(el, { offset: -20, immediate: true })
-      } else {
-        lenis.scrollTo(0, { immediate: true })
+        if (el) {
+          const top = el.getBoundingClientRect().top + window.scrollY - 20
+          window.scrollTo(0, Math.max(0, top))
+          return
+        }
       }
-    }, 120)
+      window.scrollTo(0, 0)
+    }
+
+    go()
+    const t1 = window.setTimeout(go, 120)
+    const t2 = window.setTimeout(refresh, 600)
+    window.addEventListener('load', go)
+    window.addEventListener('resize', refresh)
+
+    if (!reduced && isTouch) {
+      ScrollTrigger.normalizeScroll(true)
+    }
 
     return () => {
-      window.clearTimeout(bootId)
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('load', onResize)
-      gsap.ticker.remove(ticker)
-      if (window.__lenis === lenis) delete window.__lenis
-      lenis.destroy()
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+      window.removeEventListener('load', go)
+      window.removeEventListener('resize', refresh)
+      ScrollTrigger.normalizeScroll(false)
     }
-  }, [reduced])
+  }, [reduced, isTouch])
 
   return <>{children}</>
 }
