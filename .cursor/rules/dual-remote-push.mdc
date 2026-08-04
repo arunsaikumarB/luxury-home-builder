@@ -1,0 +1,31 @@
+---
+description: Auto-commit and push completed work to both GitHub and GitLab
+alwaysApply: true
+---
+
+# Dual remote push (GitHub + GitLab)
+
+When you finish implementing requested code/content changes in this project, **commit and push without waiting for the user to ask**.
+
+## Remotes
+
+| Remote | URL | Branch |
+|---|---|---|
+| `origin` (GitHub) | `https://github.com/arunsaikumarB/luxury-home-builder.git` | `main` (also update current feature branch if applicable) |
+| `gitlab` | `http://gitlab.lstech-hq.lstechinc.com/websites/dh-builders.git` | `dh-builder-v1` |
+
+## Workflow after meaningful changes
+
+1. Stage only relevant project files (never secrets / `.env`).
+2. Commit with a clear message (follow repo commit style).
+3. Push to **both**:
+   - `git push origin HEAD:main` (or current GitHub-tracking branch)
+   - `git push gitlab HEAD:dh-builder-v1` (or current GitLab-tracking branch)
+4. If on `dh-builder-v1`, push that branch to GitLab and also push/sync `main` to GitHub when the work belongs on both.
+5. Report both remote URLs briefly when done.
+
+## Exceptions
+
+- Do **not** push if the user only asked a question / review with no code edits.
+- Do **not** force-push unless the user explicitly asks.
+- Skip empty commits when there is nothing to commit.
