@@ -58,11 +58,22 @@ export function Testimonials() {
     trackEl.addEventListener('touchstart', pause, { passive: true })
     trackEl.addEventListener('touchend', play)
 
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return
+        if (entry.isIntersecting) play()
+        else pause()
+      },
+      { threshold: 0.05 },
+    )
+    io.observe(sectionRef.current)
+
     return () => {
       trackEl.removeEventListener('mouseenter', pause)
       trackEl.removeEventListener('mouseleave', play)
       trackEl.removeEventListener('touchstart', pause)
       trackEl.removeEventListener('touchend', play)
+      io.disconnect()
       tweenRef.current?.kill()
       ctx.revert()
     }
@@ -93,7 +104,7 @@ export function Testimonials() {
           {loop.map((item, i) => (
             <article
               key={`${item.name}-${i}`}
-              className="testimonial-card glass group w-[min(85vw,420px)] shrink-0 rounded-2xl p-8 md:p-10"
+              className="testimonial-card group w-[min(85vw,420px)] shrink-0 rounded-2xl border border-foreground/8 bg-card/95 p-8 md:p-10 shadow-[0_8px_30px_rgba(17,17,17,0.04)]"
               style={reduced ? undefined : { opacity: 0 }}
             >
               <p className="font-display text-2xl md:text-3xl leading-snug text-foreground/90">

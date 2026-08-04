@@ -12,16 +12,21 @@ export function ScrollIndicator() {
 
     const isMobile = window.matchMedia('(max-width: 768px)').matches
 
-    const tween = gsap.to(barRef.current, {
-      ...(isMobile ? { width: '100%' } : { height: '100%' }),
-      ease: 'none',
-      scrollTrigger: {
-        trigger: document.documentElement,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: 0.3,
+    const tween = gsap.fromTo(
+      barRef.current,
+      { scaleX: isMobile ? 0 : 1, scaleY: isMobile ? 1 : 0 },
+      {
+        scaleX: 1,
+        scaleY: 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: document.documentElement,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.35,
+        },
       },
-    })
+    )
 
     return () => {
       tween.scrollTrigger?.kill()

@@ -10,7 +10,15 @@ export function Navbar() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
+    let ticking = false
+    const onScroll = () => {
+      if (ticking) return
+      ticking = true
+      window.requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 40)
+        ticking = false
+      })
+    }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -50,6 +58,8 @@ export function Navbar() {
               alt=""
               width={40}
               height={40}
+              decoding="async"
+              fetchPriority="low"
               className="h-9 w-9 shrink-0 object-contain md:h-10 md:w-10"
               aria-hidden="true"
             />

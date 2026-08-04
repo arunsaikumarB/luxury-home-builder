@@ -13,7 +13,6 @@ export default defineConfig({
   server: {
     watch: {
       // Large local MP4s cause EBUSY crashes on Windows file watchers.
-      // Ignore only media binaries — keep the folder itself watched so new files are picked up.
       ignored: [
         '**/public/videos/**/*.mp4',
         '**/public/videos/**/*.mov',
@@ -31,9 +30,6 @@ export default defineConfig({
           }
           if (id.includes('node_modules/framer-motion')) {
             return 'motion'
-          }
-          if (id.includes('node_modules/lenis')) {
-            return 'lenis'
           }
         },
       },

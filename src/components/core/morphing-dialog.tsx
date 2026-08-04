@@ -335,6 +335,8 @@ function MorphingDialogImage({
     <motion.img
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className={cn(className)}
       layoutId={`dialog-img-${uniqueId}`}
       style={style}

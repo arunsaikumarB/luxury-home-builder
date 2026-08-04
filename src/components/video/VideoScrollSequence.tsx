@@ -10,7 +10,7 @@ import { walkthroughVideoSrc, type WalkthroughSection } from '@/data/walkthrough
 
 gsap.registerPlugin(ScrollTrigger)
 
-const HERO_POSTER = '/videos/hero-poster.jpg?v=4'
+const HERO_POSTER = '/videos/hero-poster.jpg?v=5'
 
 function hasDeepLinkHash() {
   const hash = window.location.hash.replace(/^#/, '')
@@ -341,6 +341,7 @@ export function VideoScrollSequence({
   const pendingTimeRef = useRef(0)
   const lastAppliedTimeRef = useRef(-1)
   const rafRef = useRef(0)
+  const wakeScrubRef = useRef<(() => void) | null>(null)
 
   const [ready, setReady] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
@@ -555,25 +556,65 @@ export function VideoScrollSequence({
   useEffect(() => {
     if (!ready || reduced) return
 
+    let running = true
+    let idleFrames = 0
+
     const tick = () => {
+      if (!running) return
+
       const target = targetProgressRef.current
       let current = renderProgressRef.current
       const delta = target - current
-      const alpha = Math.abs(delta) > 0.12 ? 0.5 : 0.18
-      current += delta * alpha
-      if (Math.abs(target - current) < 0.0005) current = target
-      renderProgressRef.current = current
+      const settled = Math.abs(delta) < 0.0005
+
+      if (settled) {
+        current = target
+        renderProgressRef.current = current
+        idleFrames += 1
+      } else {
+        idleFrames = 0
+        const alpha = Math.abs(delta) > 0.12 ? 0.48 : 0.16
+        current += delta * alpha
+        if (Math.abs(target - current) < 0.0005) current = target
+        renderProgressRef.current = current
+      }
 
       const video = videoRef.current
       pendingTimeRef.current = safeTime(video?.duration || 1, current)
-      flushSeek()
+
+      // Keep seeking while catching up; skip decoder work once fully settled
+      if (!settled || seekBusyRef.current || idleFrames < 2) {
+        flushSeek()
+      }
       updateUi(current)
+
+      // Sleep the loop when scroll is idle to free CPU on Azure
+      if (settled && !seekBusyRef.current && idleFrames > 8) {
+        rafRef.current = 0
+        return
+      }
 
       rafRef.current = window.requestAnimationFrame(tick)
     }
 
+    const wake = () => {
+      if (rafRef.current) return
+      idleFrames = 0
+      rafRef.current = window.requestAnimationFrame(tick)
+    }
+    wakeScrubRef.current = wake
+
+    const onScrollWake = () => wake()
+    window.addEventListener('scroll', onScrollWake, { passive: true })
     rafRef.current = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(rafRef.current)
+
+    return () => {
+      running = false
+      wakeScrubRef.current = null
+      window.removeEventListener('scroll', onScrollWake)
+      window.cancelAnimationFrame(rafRef.current)
+      rafRef.current = 0
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, reduced, chapterCount, onSectionChange])
 
@@ -592,7 +633,7 @@ export function VideoScrollSequence({
         id: 'walkthrough-sequence',
         trigger: containerRef.current,
         pin: pinRef.current,
-        scrub: 0.6,
+        scrub: 0.55,
         pinSpacing: true,
         start: 'top top',
         end: () =>
@@ -601,18 +642,22 @@ export function VideoScrollSequence({
         fastScrollEnd: true,
         onUpdate: (self) => {
           targetProgressRef.current = self.progress
+          wakeScrubRef.current?.()
         },
         onEnterBack: (self) => {
           targetProgressRef.current = self.progress
           renderProgressRef.current = self.progress
+          wakeScrubRef.current?.()
         },
         onEnter: (self) => {
           targetProgressRef.current = self.progress
           renderProgressRef.current = self.progress
+          wakeScrubRef.current?.()
         },
         onRefresh: (self) => {
           targetProgressRef.current = self.progress
           renderProgressRef.current = self.progress
+          wakeScrubRef.current?.()
         },
       })
     }, containerRef)
@@ -624,18 +669,16 @@ export function VideoScrollSequence({
         renderProgressRef.current = 0
       }
       ScrollTrigger.refresh()
-    }, 100)
+    }, 120)
 
-    const lateRefreshIds = [400, 1200].map((ms) =>
-      window.setTimeout(() => ScrollTrigger.refresh(), ms),
-    )
+    const lateRefreshId = window.setTimeout(() => ScrollTrigger.refresh(), 700)
 
     const onLoad = () => ScrollTrigger.refresh()
     window.addEventListener('load', onLoad)
 
     return () => {
       window.clearTimeout(refreshId)
-      lateRefreshIds.forEach((id) => window.clearTimeout(id))
+      window.clearTimeout(lateRefreshId)
       window.removeEventListener('load', onLoad)
       triggerRef.current = null
       ctx.revert()
@@ -724,7 +767,7 @@ export function VideoScrollSequence({
             <button
               type="button"
               onClick={skipWalkthrough}
-              className="group inline-flex items-center gap-2 border border-background/25 bg-background/10 px-4 py-2.5 text-[10px] uppercase tracking-[0.22em] text-background/85 backdrop-blur-md transition-all duration-500 hover:border-accent hover:bg-accent hover:text-foreground cursor-pointer"
+              className="group inline-flex items-center gap-2 border border-background/25 bg-background/20 px-4 py-2.5 text-[10px] uppercase tracking-[0.22em] text-background/85 transition-colors duration-500 hover:border-accent hover:bg-accent hover:text-foreground cursor-pointer"
             >
               Skip Scroll
               <ChevronsDown className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-y-0.5" />

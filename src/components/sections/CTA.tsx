@@ -39,7 +39,7 @@ export function CTA() {
     >
       <div ref={bgRef} className="absolute inset-0 scale-110 will-change-transform">
         <img
-          src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=2400&q=85"
+          src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1600&q=75"
           alt="Luxury estate at dusk"
           className="h-full w-full object-cover"
           loading="lazy"

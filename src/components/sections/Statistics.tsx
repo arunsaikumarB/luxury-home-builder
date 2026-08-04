@@ -29,7 +29,7 @@ export function Statistics() {
     <section className="relative overflow-hidden bg-secondary text-background py-24 md:py-32">
       <div className="absolute inset-0 opacity-30">
         <img
-          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=60"
+          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=65"
           alt=""
           className="h-full w-full object-cover"
           loading="lazy"

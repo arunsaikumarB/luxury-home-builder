@@ -31,12 +31,11 @@ export function WhyUs() {
 
         gsap.fromTo(
           panel.querySelector('.why-copy'),
-          { opacity: 0, y: 40, filter: 'blur(8px)' },
+          { opacity: 0, y: 36 },
           {
             opacity: 1,
             y: 0,
-            filter: 'blur(0px)',
-            duration: 1.1,
+            duration: 1,
             ease: 'power4.out',
             scrollTrigger: {
               trigger: panel,

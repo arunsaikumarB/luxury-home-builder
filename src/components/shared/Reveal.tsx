@@ -22,7 +22,7 @@ export function Reveal({
   delay = 0,
   y = 48,
   scale = 1,
-  blur = false,
+  blur: _blur = false,
   once = true,
 }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -37,16 +37,15 @@ export function Reveal({
         opacity: 0,
         y,
         scale: scale === 1 ? 1 : scale,
-        filter: blur ? 'blur(12px)' : 'blur(0px)',
       },
       {
         opacity: 1,
         y: 0,
         scale: 1,
-        filter: 'blur(0px)',
-        duration: 1.2,
+        duration: 1.05,
         delay,
         ease: 'power4.out',
+        clearProps: 'transform,opacity',
         scrollTrigger: {
           trigger: ref.current,
           start: 'top 88%',
@@ -59,10 +58,10 @@ export function Reveal({
       tween.scrollTrigger?.kill()
       tween.kill()
     }
-  }, [delay, y, scale, blur, once, reduced])
+  }, [delay, y, scale, once, reduced])
 
   return (
-    <div ref={ref} className={cn('will-change-transform', className)}>
+    <div ref={ref} className={cn(className)}>
       {children}
     </div>
   )

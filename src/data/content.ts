@@ -62,7 +62,7 @@ export const services = [
     details:
       'We manage permitting, structure, systems, and finishes as one continuous build. You get a clear schedule, curated materials, and a residence shaped around how you actually live — not a template catalog.',
     image:
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=960&q=75',
   },
   {
     id: 'house-renovation',
@@ -73,7 +73,7 @@ export const services = [
     details:
       'Whether it’s a full gut renovation or a focused upgrade, we protect what works, elevate what doesn’t, and keep the home livable through careful phasing and craftsmanship.',
     image:
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=960&q=75',
   },
   {
     id: 'architecture-design',
@@ -84,7 +84,7 @@ export const services = [
     details:
       'Our design process aligns site, code, and lifestyle into drawings ready for build. Proportions, daylight, and circulation are resolved early so construction stays calm and precise.',
     image:
-      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=960&q=75',
   },
   {
     id: 'interior-design',
@@ -95,7 +95,7 @@ export const services = [
     details:
       'We specify millwork, stone, lighting, and soft finishes as a cohesive palette — so every room feels intentional, calm, and distinctly yours.',
     image:
-      'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=960&q=75',
   },
   {
     id: 'fixing-support',
@@ -106,7 +106,7 @@ export const services = [
     details:
       'From water intrusion and settling to deferred maintenance, our team diagnoses carefully and repairs with the same standard we bring to new construction.',
     image:
-      'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=960&q=75',
   },
   {
     id: 'painting',
@@ -117,7 +117,7 @@ export const services = [
     details:
       'Proper prep, premium coatings, and crisp execution — interiors and exteriors that look refined on day one and hold up through New Jersey seasons.',
     image:
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=960&q=75',
   },
 ]
 
@@ -131,7 +131,7 @@ export const projects = [
     details:
       'A modern estate composed around courtyard light, limestone, and warm oak. Indoor–outdoor rooms open to a private garden terrace designed for year-round entertaining.',
     image:
-      'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1100&q=75',
     tall: true,
   },
   {
@@ -143,7 +143,7 @@ export const projects = [
     details:
       'A whole-home renovation that preserved the manor’s classic proportions while introducing a chef’s kitchen, spa baths, and a quieter, more luminous flow between rooms.',
     image:
-      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=960&q=75',
     tall: false,
   },
   {
@@ -155,7 +155,7 @@ export const projects = [
     details:
       'Design–build from concept through completion. Clean volumes, soft material contrast, and a landscape-forward plan that settles the home into its wooded lot.',
     image:
-      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=960&q=75',
     tall: false,
   },
   {
@@ -167,7 +167,7 @@ export const projects = [
     details:
       'A hillside villa with layered terraces, a double-height living hall, and craft-focused interiors — stone, plaster, and custom millwork throughout.',
     image:
-      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1100&q=75',
     tall: true,
   },
   {
@@ -179,7 +179,7 @@ export const projects = [
     details:
       'An estate-scale residence with wellness wing, gallery circulation, and expansive glass that frames the ridgeline while staying private from the street.',
     image:
-      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=960&q=75',
     tall: false,
   },
   {
@@ -191,7 +191,7 @@ export const projects = [
     details:
       'A seamless addition that expands family living and outdoor connection without disrupting the original home’s character or neighborhood scale.',
     image:
-      'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=960&q=75',
     tall: false,
   },
 ]
@@ -229,28 +229,28 @@ export const whyUs = [
     description:
       'We build homes that will still feel contemporary in twenty years — rooted in proportion, light, and material honesty.',
     image:
-      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1100&q=75',
   },
   {
     title: 'White-Glove Project Leadership',
     description:
       'A dedicated project director orchestrates every trade, timeline, and decision so your experience stays calm and clear.',
     image:
-      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1100&q=75',
   },
   {
     title: 'New Jersey Expertise',
     description:
       'From North Jersey estates to Shore properties — we know the codes, the climate, and the character of each community.',
     image:
-      'https://images.unsplash.com/photo-1600047509358-9dc75590daeb?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1600047509358-9dc75590daeb?auto=format&fit=crop&w=1100&q=75',
   },
   {
     title: 'Transparent Partnership',
     description:
       'Clear budgets, honest timelines, and open communication. Luxury includes peace of mind.',
     image:
-      'https://images.unsplash.com/photo-1600585154363-67eb9e2e2099?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1600585154363-67eb9e2e2099?auto=format&fit=crop&w=1100&q=75',
   },
 ]
 

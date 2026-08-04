@@ -75,7 +75,7 @@ export function About() {
 
           <div className="about-mask relative aspect-[4/5] overflow-hidden rounded-sm">
             <ParallaxImage
-              src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1400&q=80"
+              src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1100&q=75"
               alt="Luxury living room interior"
               className="absolute inset-0 h-full w-full"
               speed={0.15}

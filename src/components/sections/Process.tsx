@@ -36,14 +36,13 @@ export function Process() {
 
       gsap.fromTo(
         '.process-step',
-        { opacity: 0, x: -30, filter: 'blur(6px)' },
+        { opacity: 0, x: -24 },
         {
           opacity: 1,
           x: 0,
-          filter: 'blur(0px)',
-          duration: 1.1,
+          duration: 1,
           ease: 'power4.out',
-          stagger: 0.2,
+          stagger: 0.16,
           scrollTrigger: {
             trigger: '.process-timeline',
             start: 'top 70%',

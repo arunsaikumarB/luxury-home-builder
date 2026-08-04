@@ -6,7 +6,7 @@ export function Walkthrough() {
     <VideoScrollSequence
       videos={walkthroughSections}
       videoSrc={walkthroughVideoSrc}
-      scrollVhPerSection={260}
+      scrollVhPerSection={220}
       objectFit="cover"
     />
   )

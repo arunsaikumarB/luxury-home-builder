@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useIsTouch, usePrefersReducedMotion } from '@/hooks/useMediaQuery'
+import { usePrefersReducedMotion } from '@/hooks/useMediaQuery'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -11,10 +11,9 @@ function getSectionHash() {
   return hash
 }
 
-/** Native scroll only — Lenis + pinned video scrub stuck the Azure deploy. */
+/** Native scroll only — Lenis + normalizeScroll conflicted with pinned video scrub. */
 export function SmoothScroll({ children }: { children: ReactNode }) {
   const reduced = usePrefersReducedMotion()
-  const isTouch = useIsTouch()
 
   useEffect(() => {
     if ('scrollRestoration' in history) {
@@ -22,6 +21,7 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     }
 
     const sectionHash = getSectionHash()
+    let resizeTimer = 0
 
     const refresh = () => ScrollTrigger.refresh()
     const go = () => {
@@ -37,24 +37,23 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
       window.scrollTo(0, 0)
     }
 
-    go()
-    const t1 = window.setTimeout(go, 120)
-    const t2 = window.setTimeout(refresh, 600)
-    window.addEventListener('load', go)
-    window.addEventListener('resize', refresh)
-
-    if (!reduced && isTouch) {
-      ScrollTrigger.normalizeScroll(true)
+    const onResize = () => {
+      window.clearTimeout(resizeTimer)
+      resizeTimer = window.setTimeout(refresh, 180)
     }
+
+    go()
+    const t1 = window.setTimeout(go, 150)
+    window.addEventListener('load', go)
+    window.addEventListener('resize', onResize)
 
     return () => {
       window.clearTimeout(t1)
-      window.clearTimeout(t2)
+      window.clearTimeout(resizeTimer)
       window.removeEventListener('load', go)
-      window.removeEventListener('resize', refresh)
-      ScrollTrigger.normalizeScroll(false)
+      window.removeEventListener('resize', onResize)
     }
-  }, [reduced, isTouch])
+  }, [reduced])
 
   return <>{children}</>
 }

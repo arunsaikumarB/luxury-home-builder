@@ -37,15 +37,14 @@ export function Projects() {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.project-card',
-        { y: 100, opacity: 0, scale: 0.96, filter: 'blur(8px)' },
+        { y: 80, opacity: 0, scale: 0.97 },
         {
           y: 0,
           opacity: 1,
           scale: 1,
-          filter: 'blur(0px)',
-          duration: 1.3,
+          duration: 1.15,
           ease: 'power4.out',
-          stagger: 0.12,
+          stagger: 0.1,
           scrollTrigger: {
             trigger: '.projects-grid',
             start: 'top 78%',
