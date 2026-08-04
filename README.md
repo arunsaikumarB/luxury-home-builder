@@ -4,7 +4,6 @@ Premium luxury construction company website — cinematic scroll storytelling, G
 
 Live reference: https://dreamhomebuildersnj.com
 
-
 ## Stack
 
 - React + TypeScript + Vite
