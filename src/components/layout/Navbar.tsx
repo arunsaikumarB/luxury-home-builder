@@ -41,12 +41,22 @@ export function Navbar() {
           <a
             href="#walkthrough"
             className={cn(
-              'font-display text-xl md:text-2xl tracking-tight transition-all duration-700',
+              'flex items-center gap-2.5 font-display text-xl md:text-2xl tracking-tight transition-all duration-700',
               scrolled ? 'scale-95 text-foreground' : 'text-background',
             )}
           >
-            {siteConfig.name}
-            <span className="text-accent">.</span>
+            <img
+              src="/logo-dhb.png"
+              alt=""
+              width={40}
+              height={40}
+              className="h-9 w-9 shrink-0 object-contain md:h-10 md:w-10"
+              aria-hidden="true"
+            />
+            <span>
+              {siteConfig.name}
+              <span className="text-accent">.</span>
+            </span>
           </a>
 
           <nav className="hidden lg:flex items-center gap-10" aria-label="Primary">
@@ -109,8 +119,19 @@ export function Navbar() {
           >
             <div className="flex h-full flex-col px-6 py-6 md:px-10">
               <div className="flex items-center justify-between">
-                <span className="font-display text-3xl">
-                  {siteConfig.name}<span className="text-accent">.</span>
+                <span className="flex items-center gap-2.5 font-display text-3xl">
+                  <img
+                    src="/logo-dhb.png"
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="h-10 w-10 shrink-0 object-contain"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    {siteConfig.name}
+                    <span className="text-accent">.</span>
+                  </span>
                 </span>
                 <button
                   type="button"
