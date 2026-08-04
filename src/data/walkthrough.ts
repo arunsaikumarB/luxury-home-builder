@@ -18,7 +18,7 @@ export type WalkthroughSection = {
 }
 
 /** Single continuous hero film — scroll scrubs this one file end-to-end */
-export const walkthroughVideoSrc = '/videos/hero-walkthrough.mp4?v=2'
+export const walkthroughVideoSrc = '/videos/hero-walkthrough.mp4?v=3'
 
 /**
  * Chapter overlays timed evenly across the film.

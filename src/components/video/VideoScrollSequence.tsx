@@ -10,7 +10,7 @@ import { walkthroughVideoSrc, type WalkthroughSection } from '@/data/walkthrough
 
 gsap.registerPlugin(ScrollTrigger)
 
-const HERO_POSTER = '/videos/hero-poster.jpg?v=2'
+const HERO_POSTER = '/videos/hero-poster.jpg?v=3'
 
 function hasDeepLinkHash() {
   const hash = window.location.hash.replace(/^#/, '')
@@ -246,7 +246,7 @@ function applyOverlayFade(el: HTMLDivElement | null, local: number) {
 
 function safeTime(duration: number, progress: number) {
   if (!Number.isFinite(duration) || duration <= 0) return 0.001
-  const max = Math.max(duration - 0.05, 0.001)
+  const max = Math.max(duration - 0.04, 0.001)
   return Math.min(Math.max(progress, 0), 1) * max
 }
 
@@ -276,22 +276,10 @@ async function unlockVideo(video: HTMLVideoElement) {
   })
 }
 
-function seekVideo(video: HTMLVideoElement, time: number, minDelta = 0.05) {
-  if (!Number.isFinite(video.duration) || video.duration <= 0) return
-  if (video.seeking || video.readyState < 2) return
-  const desired = Math.min(Math.max(time, 0.001), Math.max(video.duration - 0.05, 0.001))
-  if (Math.abs(video.currentTime - desired) < minDelta) return
-  try {
-    video.currentTime = desired
-  } catch {
-    /* ignore */
-  }
-}
-
 export function VideoScrollSequence({
   videos,
   videoSrc = walkthroughVideoSrc,
-  scrollVhPerSection = 220,
+  scrollVhPerSection = 280,
   objectFit = 'cover',
   className,
   onReady,
@@ -305,13 +293,17 @@ export function VideoScrollSequence({
   const counterRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<ScrollTrigger | null>(null)
 
-  const smoothProgressRef = useRef(0)
+  /** Latest scroll-driven progress 0→1 */
+  const targetProgressRef = useRef(0)
+  /** Smoothed progress used for UI + seek target */
+  const renderProgressRef = useRef(0)
   const activeIndexRef = useRef(0)
   const readyRef = useRef(false)
   const contentVisibleRef = useRef(false)
   const lastUiIndexRef = useRef(-1)
-  const lastSeekMsRef = useRef(0)
-  const lastSeekTimeRef = useRef(-1)
+  const seekBusyRef = useRef(false)
+  const pendingTimeRef = useRef(0)
+  const rafRef = useRef(0)
 
   const [ready, setReady] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
@@ -321,12 +313,28 @@ export function VideoScrollSequence({
   const reduced = usePrefersReducedMotion()
   const chapterCount = videos.length
 
-  const applyProgress = (progressRaw: number, force = false) => {
-    const progress = Math.min(Math.max(progressRaw, 0), 1)
-    smoothProgressRef.current = progress
+  const flushSeek = () => {
+    const video = videoRef.current
+    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return
+    if (seekBusyRef.current || video.readyState < 2) return
 
+    const desired = Math.min(
+      Math.max(pendingTimeRef.current, 0.001),
+      Math.max(video.duration - 0.04, 0.001),
+    )
+    if (Math.abs(video.currentTime - desired) < 0.03) return
+
+    seekBusyRef.current = true
+    try {
+      video.currentTime = desired
+    } catch {
+      seekBusyRef.current = false
+    }
+  }
+
+  const updateUi = (progress: number) => {
     const unit = progress * chapterCount
-    const index = Math.min(Math.floor(unit), chapterCount - 1)
+    const index = Math.min(Math.floor(unit), Math.max(chapterCount - 1, 0))
     const local = unit - index
 
     if (index !== activeIndexRef.current || lastUiIndexRef.current !== index) {
@@ -336,19 +344,6 @@ export function VideoScrollSequence({
       onSectionChange?.(index)
     }
 
-    const video = videoRef.current
-    const now = performance.now()
-    // Throttle seeks; denser keyframes allow slightly more frequent updates
-    if (video && (force || now - lastSeekMsRef.current > 70)) {
-      const t = safeTime(video.duration || 1, progress)
-      // Skip tiny seeks that browsers can't resolve smoothly
-      if (force || Math.abs(t - lastSeekTimeRef.current) >= 0.08) {
-        lastSeekMsRef.current = now
-        lastSeekTimeRef.current = t
-        seekVideo(video, t, force ? 0.02 : 0.1)
-      }
-    }
-
     applyOverlayFade(fadeRef.current, local)
 
     if (progressBarRef.current) progressBarRef.current.style.width = `${progress * 100}%`
@@ -356,7 +351,7 @@ export function VideoScrollSequence({
       counterRef.current.textContent = `Scroll to explore · ${String(index + 1).padStart(2, '0')} / ${String(chapterCount).padStart(2, '0')}`
     }
 
-    const show = progress > 0.01
+    const show = progress > 0.008
     if (contentVisibleRef.current !== show) {
       contentVisibleRef.current = show
       setContentVisible(show)
@@ -364,7 +359,12 @@ export function VideoScrollSequence({
   }
 
   const skipWalkthrough = () => {
-    applyProgress(1, true)
+    targetProgressRef.current = 1
+    renderProgressRef.current = 1
+    pendingTimeRef.current = safeTime(videoRef.current?.duration || 1, 1)
+    flushSeek()
+    updateUi(1)
+
     const about = document.getElementById('about')
     if (about) {
       about.scrollIntoView({ behavior: 'smooth' })
@@ -373,6 +373,27 @@ export function VideoScrollSequence({
     const st = triggerRef.current
     if (st) window.scrollTo({ top: st.end + 40, behavior: 'smooth' })
   }
+
+  // Keep latest desired frame — never drop seeks while decoder is busy
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const onSeeked = () => {
+      seekBusyRef.current = false
+      flushSeek()
+    }
+    const onSeeking = () => {
+      seekBusyRef.current = true
+    }
+
+    video.addEventListener('seeked', onSeeked)
+    video.addEventListener('seeking', onSeeking)
+    return () => {
+      video.removeEventListener('seeked', onSeeked)
+      video.removeEventListener('seeking', onSeeking)
+    }
+  }, [ready, videoSrc])
 
   // Preload single film
   useEffect(() => {
@@ -384,6 +405,8 @@ export function VideoScrollSequence({
     video.playsInline = true
     video.preload = 'auto'
     video.pause()
+    readyRef.current = false
+    setReady(false)
 
     const markReady = () => {
       if (cancelled || readyRef.current) return
@@ -396,7 +419,6 @@ export function VideoScrollSequence({
     const boot = async () => {
       setLoadProgress(0.12)
 
-      // Fail fast if Azure/SWA returns HTML fallback instead of video/mp4
       try {
         const probe = await fetch(videoSrc, { method: 'HEAD', cache: 'no-store' })
         const type = (probe.headers.get('content-type') || '').toLowerCase()
@@ -406,12 +428,11 @@ export function VideoScrollSequence({
             type,
             src: videoSrc,
           })
-          // Still show poster + UI rather than infinite loader
           markReady()
           return
         }
       } catch {
-        /* continue — HEAD may be blocked; rely on video element events */
+        /* continue */
       }
 
       if (cancelled) return
@@ -441,9 +462,8 @@ export function VideoScrollSequence({
       if (cancelled) return
       setLoadProgress(0.9)
 
-      // Paint first frame for browsers that stay blank until seeked
       try {
-        video.currentTime = 0.05
+        video.currentTime = 0.04
         await new Promise<void>((resolve) => {
           const done = () => resolve()
           video.addEventListener('seeked', done, { once: true })
@@ -453,7 +473,9 @@ export function VideoScrollSequence({
         /* ignore */
       }
 
-      smoothProgressRef.current = 0
+      targetProgressRef.current = 0
+      renderProgressRef.current = 0
+      pendingTimeRef.current = 0.04
       activeIndexRef.current = 0
       lastUiIndexRef.current = 0
       contentVisibleRef.current = false
@@ -479,11 +501,43 @@ export function VideoScrollSequence({
     }
   }, [videoSrc, onReady])
 
-  // Native ScrollTrigger — one film, progress 0→1
+  // rAF lerp + pending seek — sticky to scroll without dropping frames
+  useEffect(() => {
+    if (!ready || reduced) return
+
+    const tick = () => {
+      const target = targetProgressRef.current
+      let current = renderProgressRef.current
+      const delta = target - current
+
+      // Catch up fast on big jumps; ease gently on small ones
+      const alpha = Math.abs(delta) > 0.08 ? 0.55 : 0.22
+      current += delta * alpha
+      if (Math.abs(target - current) < 0.0004) current = target
+      renderProgressRef.current = current
+
+      const video = videoRef.current
+      const duration = video?.duration || 1
+      pendingTimeRef.current = safeTime(duration, current)
+      flushSeek()
+      updateUi(current)
+
+      rafRef.current = window.requestAnimationFrame(tick)
+    }
+
+    rafRef.current = window.requestAnimationFrame(tick)
+    return () => {
+      window.cancelAnimationFrame(rafRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, reduced, chapterCount, onSectionChange])
+
+  // Native ScrollTrigger — drive target progress only
   useEffect(() => {
     if (!ready || !containerRef.current || !pinRef.current || reduced) return
 
-    smoothProgressRef.current = 0
+    targetProgressRef.current = 0
+    renderProgressRef.current = 0
     contentVisibleRef.current = false
     setContentVisible(false)
     setActiveIndex(0)
@@ -491,23 +545,13 @@ export function VideoScrollSequence({
       window.scrollTo(0, 0)
     }
 
-    const onScrollProgress = (progress: number, forceSnap = false) => {
-      if (forceSnap) {
-        smoothProgressRef.current = progress
-        applyProgress(progress, true)
-        return
-      }
-      // Light lerp so scrub doesn't stutter on trackpad bursts
-      smoothProgressRef.current += (progress - smoothProgressRef.current) * 0.42
-      applyProgress(smoothProgressRef.current)
-    }
-
     const ctx = gsap.context(() => {
       triggerRef.current = ScrollTrigger.create({
         id: 'walkthrough-sequence',
         trigger: containerRef.current,
         pin: pinRef.current,
-        scrub: true,
+        // Slight GSAP scrub smoothing — pairs with rAF lerp
+        scrub: 0.45,
         pinSpacing: true,
         start: 'top top',
         end: () =>
@@ -515,16 +559,19 @@ export function VideoScrollSequence({
         invalidateOnRefresh: true,
         fastScrollEnd: true,
         onUpdate: (self) => {
-          onScrollProgress(self.progress)
+          targetProgressRef.current = self.progress
         },
         onEnterBack: (self) => {
-          onScrollProgress(self.progress, true)
+          targetProgressRef.current = self.progress
+          renderProgressRef.current = self.progress
         },
         onEnter: (self) => {
-          onScrollProgress(self.progress, true)
+          targetProgressRef.current = self.progress
+          renderProgressRef.current = self.progress
         },
         onRefresh: (self) => {
-          onScrollProgress(self.progress, true)
+          targetProgressRef.current = self.progress
+          renderProgressRef.current = self.progress
         },
       })
     }, containerRef)
@@ -532,7 +579,8 @@ export function VideoScrollSequence({
     const refreshId = window.setTimeout(() => {
       if (!hasDeepLinkHash()) {
         window.scrollTo(0, 0)
-        smoothProgressRef.current = 0
+        targetProgressRef.current = 0
+        renderProgressRef.current = 0
       }
       ScrollTrigger.refresh()
     }, 100)
@@ -551,9 +599,7 @@ export function VideoScrollSequence({
       triggerRef.current = null
       ctx.revert()
     }
-    // applyProgress closes over chapterCount / refs — intentional
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, chapterCount, scrollVhPerSection, reduced, onSectionChange])
+  }, [ready, chapterCount, scrollVhPerSection, reduced])
 
   useEffect(() => {
     if (!reduced || !ready) return
@@ -607,14 +653,14 @@ export function VideoScrollSequence({
             <div className="pointer-events-none absolute inset-0 z-[4] bg-gradient-to-r from-black/25 via-transparent to-black/15" />
           </div>
 
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="sync">
             {contentVisible && videos[activeIndex] && (
               <motion.div
                 key={videos[activeIndex].id}
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                 className="absolute inset-0 z-10"
               >
                 <OverlayContent section={videos[activeIndex]} fadeRef={fadeRef} />
