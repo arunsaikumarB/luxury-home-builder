@@ -10,7 +10,7 @@ import { walkthroughVideoSrc, type WalkthroughSection } from '@/data/walkthrough
 
 gsap.registerPlugin(ScrollTrigger)
 
-const HERO_POSTER = '/videos/hero-poster.jpg?v=3'
+const HERO_POSTER = '/videos/hero-poster.jpg?v=4'
 
 function hasDeepLinkHash() {
   const hash = window.location.hash.replace(/^#/, '')
@@ -219,7 +219,7 @@ function LoadingScreen({ progress, visible }: { progress: number; visible: boole
         >
           <p className="font-display text-3xl md:text-5xl tracking-tight">Dream Home Builders</p>
           <p className="mt-3 text-[11px] uppercase tracking-[0.35em] text-background/50">
-            Preparing cinematic walkthrough
+            Loading cinematic walkthrough
           </p>
           <div className="mt-12 h-px w-48 overflow-hidden bg-background/15">
             <div
@@ -250,6 +250,10 @@ function safeTime(duration: number, progress: number) {
   return Math.min(Math.max(progress, 0), 1) * max
 }
 
+function quantizeTime(time: number, step = 1 / 12) {
+  return Math.round(time / step) * step
+}
+
 async function unlockVideo(video: HTMLVideoElement) {
   video.muted = true
   video.playsInline = true
@@ -276,10 +280,43 @@ async function unlockVideo(video: HTMLVideoElement) {
   })
 }
 
+async function prefetchVideoBlob(
+  url: string,
+  onProgress: (ratio: number) => void,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const res = await fetch(url, { signal, cache: 'force-cache' })
+  if (!res.ok) throw new Error(`Video fetch failed (${res.status})`)
+  const type = (res.headers.get('content-type') || '').toLowerCase()
+  if (type.includes('text/html')) throw new Error('Video returned HTML fallback')
+
+  const total = Number(res.headers.get('content-length') || 0)
+  if (!res.body) {
+    onProgress(1)
+    return res.blob()
+  }
+
+  const reader = res.body.getReader()
+  const chunks: BlobPart[] = []
+  let received = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    received += value.byteLength
+    if (total > 0) onProgress(Math.min(received / total, 0.99))
+    else onProgress(Math.min(0.15 + received / (32 * 1024 * 1024), 0.95))
+  }
+
+  onProgress(1)
+  return new Blob(chunks, { type: type.includes('video') ? type : 'video/mp4' })
+}
+
 export function VideoScrollSequence({
   videos,
   videoSrc = walkthroughVideoSrc,
-  scrollVhPerSection = 280,
+  scrollVhPerSection = 260,
   objectFit = 'cover',
   className,
   onReady,
@@ -292,10 +329,9 @@ export function VideoScrollSequence({
   const progressBarRef = useRef<HTMLDivElement>(null)
   const counterRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<ScrollTrigger | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
 
-  /** Latest scroll-driven progress 0→1 */
   const targetProgressRef = useRef(0)
-  /** Smoothed progress used for UI + seek target */
   const renderProgressRef = useRef(0)
   const activeIndexRef = useRef(0)
   const readyRef = useRef(false)
@@ -303,12 +339,14 @@ export function VideoScrollSequence({
   const lastUiIndexRef = useRef(-1)
   const seekBusyRef = useRef(false)
   const pendingTimeRef = useRef(0)
+  const lastAppliedTimeRef = useRef(-1)
   const rafRef = useRef(0)
 
   const [ready, setReady] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
   const [activeIndex, setActiveIndex] = useState(0)
   const [contentVisible, setContentVisible] = useState(false)
+  const [playbackSrc, setPlaybackSrc] = useState<string | undefined>(undefined)
 
   const reduced = usePrefersReducedMotion()
   const chapterCount = videos.length
@@ -319,12 +357,17 @@ export function VideoScrollSequence({
     if (seekBusyRef.current || video.readyState < 2) return
 
     const desired = Math.min(
-      Math.max(pendingTimeRef.current, 0.001),
+      Math.max(quantizeTime(pendingTimeRef.current), 0.001),
       Math.max(video.duration - 0.04, 0.001),
     )
-    if (Math.abs(video.currentTime - desired) < 0.03) return
+    if (Math.abs(desired - lastAppliedTimeRef.current) < 0.04) return
+    if (Math.abs(video.currentTime - desired) < 0.035) {
+      lastAppliedTimeRef.current = desired
+      return
+    }
 
     seekBusyRef.current = true
+    lastAppliedTimeRef.current = desired
     try {
       video.currentTime = desired
     } catch {
@@ -374,7 +417,6 @@ export function VideoScrollSequence({
     if (st) window.scrollTo({ top: st.end + 40, behavior: 'smooth' })
   }
 
-  // Keep latest desired frame — never drop seeks while decoder is busy
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -393,10 +435,60 @@ export function VideoScrollSequence({
       video.removeEventListener('seeked', onSeeked)
       video.removeEventListener('seeking', onSeeking)
     }
-  }, [ready, videoSrc])
+  }, [ready, playbackSrc])
 
-  // Preload single film
   useEffect(() => {
+    let cancelled = false
+    const abort = new AbortController()
+    readyRef.current = false
+    setReady(false)
+    setPlaybackSrc(undefined)
+    setLoadProgress(0.02)
+
+    const boot = async () => {
+      try {
+        const blob = await prefetchVideoBlob(
+          videoSrc,
+          (ratio) => {
+            if (!cancelled) setLoadProgress(0.05 + ratio * 0.78)
+          },
+          abort.signal,
+        )
+        if (cancelled) return
+
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+        const objectUrl = URL.createObjectURL(blob)
+        blobUrlRef.current = objectUrl
+        setPlaybackSrc(objectUrl)
+        setLoadProgress(0.88)
+      } catch (err) {
+        if (cancelled || (err instanceof DOMException && err.name === 'AbortError')) return
+        console.error('[walkthrough] Prefetch failed, falling back to direct src', err)
+        setPlaybackSrc(videoSrc)
+      }
+    }
+
+    void boot()
+
+    const timeout = window.setTimeout(() => {
+      if (!readyRef.current && !cancelled) {
+        setPlaybackSrc((prev) => prev ?? videoSrc)
+      }
+    }, 20000)
+
+    return () => {
+      cancelled = true
+      abort.abort()
+      window.clearTimeout(timeout)
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+    }
+  }, [videoSrc, onReady])
+
+  useEffect(() => {
+    if (!playbackSrc) return
     let cancelled = false
     const video = videoRef.current
     if (!video) return
@@ -404,104 +496,62 @@ export function VideoScrollSequence({
     video.muted = true
     video.playsInline = true
     video.preload = 'auto'
-    video.pause()
-    readyRef.current = false
-    setReady(false)
 
-    const markReady = () => {
+    const finish = async () => {
       if (cancelled || readyRef.current) return
-      readyRef.current = true
-      setReady(true)
-      setLoadProgress(1)
-      onReady?.()
-    }
-
-    const boot = async () => {
-      setLoadProgress(0.12)
-
-      try {
-        const probe = await fetch(videoSrc, { method: 'HEAD', cache: 'no-store' })
-        const type = (probe.headers.get('content-type') || '').toLowerCase()
-        if (!probe.ok || type.includes('text/html')) {
-          console.error('[walkthrough] Video asset missing or mis-served', {
-            status: probe.status,
-            type,
-            src: videoSrc,
-          })
-          markReady()
-          return
-        }
-      } catch {
-        /* continue */
-      }
-
-      if (cancelled) return
-      setLoadProgress(0.28)
-
-      await new Promise<void>((resolve) => {
-        if (video.readyState >= 2 && Number.isFinite(video.duration) && video.duration > 0) {
-          resolve()
-          return
-        }
-        const done = () => resolve()
-        video.addEventListener('loadeddata', done, { once: true })
-        video.addEventListener('canplay', done, { once: true })
-        video.addEventListener('error', done, { once: true })
-        window.setTimeout(done, 12000)
-      })
-      if (cancelled) return
-
-      if (!Number.isFinite(video.duration) || video.duration <= 0) {
-        console.error('[walkthrough] Video failed to decode', videoSrc)
-        markReady()
-        return
-      }
-
-      setLoadProgress(0.6)
+      setLoadProgress(0.92)
       await unlockVideo(video)
       if (cancelled) return
-      setLoadProgress(0.9)
 
       try {
         video.currentTime = 0.04
         await new Promise<void>((resolve) => {
           const done = () => resolve()
           video.addEventListener('seeked', done, { once: true })
-          window.setTimeout(done, 800)
+          window.setTimeout(done, 900)
         })
       } catch {
         /* ignore */
       }
+      if (cancelled) return
 
       targetProgressRef.current = 0
       renderProgressRef.current = 0
       pendingTimeRef.current = 0.04
+      lastAppliedTimeRef.current = -1
       activeIndexRef.current = 0
       lastUiIndexRef.current = 0
       contentVisibleRef.current = false
       setContentVisible(false)
       setActiveIndex(0)
 
-      if (!hasDeepLinkHash()) {
-        window.scrollTo(0, 0)
-      }
+      if (!hasDeepLinkHash()) window.scrollTo(0, 0)
 
-      markReady()
+      readyRef.current = true
+      setReady(true)
+      setLoadProgress(1)
+      onReady?.()
     }
 
-    void boot()
+    const onReadyData = () => {
+      void finish()
+    }
 
-    const timeout = window.setTimeout(() => {
-      markReady()
-    }, 14000)
+    if (video.readyState >= 2) {
+      void finish()
+    } else {
+      video.addEventListener('loadeddata', onReadyData, { once: true })
+      video.addEventListener('error', onReadyData, { once: true })
+      window.setTimeout(onReadyData, 10000)
+    }
 
     return () => {
       cancelled = true
-      window.clearTimeout(timeout)
+      video.removeEventListener('loadeddata', onReadyData)
+      video.removeEventListener('error', onReadyData)
     }
-  }, [videoSrc, onReady])
+  }, [playbackSrc, onReady])
 
-  // rAF lerp + pending seek — sticky to scroll without dropping frames
   useEffect(() => {
     if (!ready || reduced) return
 
@@ -509,16 +559,13 @@ export function VideoScrollSequence({
       const target = targetProgressRef.current
       let current = renderProgressRef.current
       const delta = target - current
-
-      // Catch up fast on big jumps; ease gently on small ones
-      const alpha = Math.abs(delta) > 0.08 ? 0.55 : 0.22
+      const alpha = Math.abs(delta) > 0.12 ? 0.5 : 0.18
       current += delta * alpha
-      if (Math.abs(target - current) < 0.0004) current = target
+      if (Math.abs(target - current) < 0.0005) current = target
       renderProgressRef.current = current
 
       const video = videoRef.current
-      const duration = video?.duration || 1
-      pendingTimeRef.current = safeTime(duration, current)
+      pendingTimeRef.current = safeTime(video?.duration || 1, current)
       flushSeek()
       updateUi(current)
 
@@ -526,13 +573,10 @@ export function VideoScrollSequence({
     }
 
     rafRef.current = window.requestAnimationFrame(tick)
-    return () => {
-      window.cancelAnimationFrame(rafRef.current)
-    }
+    return () => window.cancelAnimationFrame(rafRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, reduced, chapterCount, onSectionChange])
 
-  // Native ScrollTrigger — drive target progress only
   useEffect(() => {
     if (!ready || !containerRef.current || !pinRef.current || reduced) return
 
@@ -541,17 +585,14 @@ export function VideoScrollSequence({
     contentVisibleRef.current = false
     setContentVisible(false)
     setActiveIndex(0)
-    if (!hasDeepLinkHash()) {
-      window.scrollTo(0, 0)
-    }
+    if (!hasDeepLinkHash()) window.scrollTo(0, 0)
 
     const ctx = gsap.context(() => {
       triggerRef.current = ScrollTrigger.create({
         id: 'walkthrough-sequence',
         trigger: containerRef.current,
         pin: pinRef.current,
-        // Slight GSAP scrub smoothing — pairs with rAF lerp
-        scrub: 0.45,
+        scrub: 0.6,
         pinSpacing: true,
         start: 'top top',
         end: () =>
@@ -585,7 +626,7 @@ export function VideoScrollSequence({
       ScrollTrigger.refresh()
     }, 100)
 
-    const lateRefreshIds = [300, 900, 1800].map((ms) =>
+    const lateRefreshIds = [400, 1200].map((ms) =>
       window.setTimeout(() => ScrollTrigger.refresh(), ms),
     )
 
@@ -631,7 +672,7 @@ export function VideoScrollSequence({
           <div className="absolute inset-0 bg-[#121212]">
             <video
               ref={videoRef}
-              src={videoSrc}
+              src={playbackSrc}
               poster={HERO_POSTER}
               className="absolute inset-0 h-full w-full"
               style={{
