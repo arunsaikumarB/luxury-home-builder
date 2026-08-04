@@ -4,7 +4,6 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { MagneticButton } from '@/components/shared/MagneticButton'
 import { SplitText } from '@/components/shared/SplitText'
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery'
-import { siteConfig } from '@/data/content'
 
 gsap.registerPlugin(ScrollTrigger)
 
