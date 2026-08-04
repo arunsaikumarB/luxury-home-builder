@@ -63,18 +63,18 @@ export function Projects() {
         <div className="mb-16 md:mb-20 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
           <div className="max-w-2xl">
             <Reveal>
-              <p className="text-[11px] uppercase tracking-[0.3em] text-accent mb-5">Portfolio</p>
+              <p className="text-[11px] uppercase tracking-[0.3em] text-accent mb-5">Get Inspired</p>
             </Reveal>
             <h2 className="font-display text-[clamp(2.5rem,5vw,4.5rem)]">
               <SplitText triggerOnScroll stagger={0.03}>
-                Residences that define neighborhoods.
+                Design inspiration for New Jersey homes.
               </SplitText>
             </h2>
           </div>
           <Reveal delay={0.15}>
             <p className="text-muted max-w-sm leading-relaxed">
-              A selection of custom homes and estates across New Jersey — each a study in proportion,
-              material, and light.
+              Mood, material, and atmosphere studies to help you imagine what’s possible — not a
+              claim of completed portfolio projects.
             </p>
           </Reveal>
         </div>

@@ -12,19 +12,32 @@ declare global {
   }
 }
 
+function getSectionHash() {
+  const hash = window.location.hash.replace(/^#/, '')
+  if (!hash || hash === 'walkthrough' || hash === 'top') return null
+  return hash
+}
+
 export function SmoothScroll({ children }: { children: ReactNode }) {
   const reduced = usePrefersReducedMotion()
 
   useEffect(() => {
-    // Hard refresh / first paint: always begin at the top of the page
     if ('scrollRestoration' in history) {
       history.scrollRestoration = 'manual'
     }
-    window.scrollTo(0, 0)
-    document.documentElement.scrollTop = 0
-    document.body.scrollTop = 0
 
-    if (reduced) return
+    const sectionHash = getSectionHash()
+
+    if (reduced) {
+      if (sectionHash) {
+        window.requestAnimationFrame(() => {
+          document.getElementById(sectionHash)?.scrollIntoView()
+        })
+      } else {
+        window.scrollTo(0, 0)
+      }
+      return
+    }
 
     const lenis = new Lenis({
       duration: 1.15,
@@ -35,7 +48,6 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     })
 
     window.__lenis = lenis
-    lenis.scrollTo(0, { immediate: true })
     lenis.on('scroll', ScrollTrigger.update)
 
     const ticker = (time: number) => {
@@ -48,14 +60,18 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     const onResize = () => ScrollTrigger.refresh()
     window.addEventListener('resize', onResize)
 
-    // After layout + ScrollTrigger init, pin scroll at the start again
-    const resetId = window.setTimeout(() => {
-      lenis.scrollTo(0, { immediate: true })
+    const bootId = window.setTimeout(() => {
       ScrollTrigger.refresh()
-    }, 50)
+      if (sectionHash) {
+        const el = document.getElementById(sectionHash)
+        if (el) lenis.scrollTo(el, { offset: -20, immediate: true })
+      } else {
+        lenis.scrollTo(0, { immediate: true })
+      }
+    }, 80)
 
     return () => {
-      window.clearTimeout(resetId)
+      window.clearTimeout(bootId)
       window.removeEventListener('resize', onResize)
       gsap.ticker.remove(ticker)
       if (window.__lenis === lenis) delete window.__lenis

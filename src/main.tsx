@@ -3,24 +3,28 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-// Always start at the top on load / hard refresh (prevents mid-walkthrough restore)
+// Preserve deep links (#quote, #contact, etc). Only force top on bare `/` loads.
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual'
 }
 
-const resetToStart = () => {
-  if (window.location.hash) {
-    history.replaceState(null, '', window.location.pathname + window.location.search)
-  }
+const hasSectionHash = () => {
+  const hash = window.location.hash.replace(/^#/, '')
+  return Boolean(hash) && hash !== 'walkthrough' && hash !== 'top'
+}
+
+const resetToTop = () => {
   window.scrollTo(0, 0)
   document.documentElement.scrollTop = 0
   document.body.scrollTop = 0
 }
 
-resetToStart()
+if (!hasSectionHash()) {
+  resetToTop()
+}
+
 window.addEventListener('pageshow', (event) => {
-  // Also reset when restoring from bfcache
-  if (event.persisted) resetToStart()
+  if (event.persisted && !hasSectionHash()) resetToTop()
 })
 
 createRoot(document.getElementById('root')!).render(

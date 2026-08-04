@@ -18,8 +18,8 @@ export const siteConfig = {
     quote: 'https://formspree.io/f/mjgowdwe',
   },
   social: {
-    instagram: 'https://instagram.com',
-    linkedin: 'https://linkedin.com',
+    instagram: '',
+    linkedin: '',
   },
 }
 
@@ -48,8 +48,8 @@ export const footerContactLinks = [
 
 export const stats = [
   { value: 10, suffix: '+', label: 'Years' },
-  { value: 600, suffix: '+', label: 'Projects' },
-  { value: 100, suffix: '%', label: 'Client Satisfaction' },
+  { value: 6, suffix: '', label: 'Services' },
+  { value: 1, suffix: '', label: 'NJ Focus' },
 ]
 
 export const services = [
@@ -318,7 +318,7 @@ export const faqs = [
   {
     question: 'What budget range do you typically work within?',
     answer:
-      'Our custom residences generally begin in the upper-seven-figure range. We partner with clients who value craftsmanship, longevity, and architectural distinction.',
+      'Budgets vary by scope — from kitchen and bath renovations to full custom homes and additions. Share your project details on the quote form and we’ll provide a clear, transparent estimate.',
   },
   {
     question: 'How do we begin?',

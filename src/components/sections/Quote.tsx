@@ -45,6 +45,50 @@ export function Quote() {
             <div className="grid gap-6 md:grid-cols-2">
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-secondary">
+                  Full Name <span className="text-red-600">*</span>
+                </span>
+                <input
+                  required
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Your full name"
+                  className="w-full border border-foreground/15 bg-card px-4 py-3 text-sm outline-none transition focus:border-accent"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-secondary">
+                  Email Address <span className="text-red-600">*</span>
+                </span>
+                <input
+                  required
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@email.com"
+                  className="w-full border border-foreground/15 bg-card px-4 py-3 text-sm outline-none transition focus:border-accent"
+                />
+              </label>
+            </div>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-secondary">
+                Phone <span className="text-red-600">*</span>
+              </span>
+              <input
+                required
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="(908) 555-0123"
+                className="w-full border border-foreground/15 bg-card px-4 py-3 text-sm outline-none transition focus:border-accent"
+              />
+            </label>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-secondary">
                   Service Required <span className="text-red-600">*</span>
                 </span>
                 <div className="relative">
@@ -76,7 +120,7 @@ export function Quote() {
                   name="budget"
                   type="text"
                   inputMode="numeric"
-                  placeholder="e.g. 50000"
+                  placeholder="e.g. 85000"
                   className="w-full border border-foreground/15 bg-card px-4 py-3 text-sm outline-none transition focus:border-accent"
                 />
               </label>

@@ -10,6 +10,11 @@ import type { WalkthroughSection } from '@/data/walkthrough'
 
 gsap.registerPlugin(ScrollTrigger)
 
+function hasDeepLinkHash() {
+  const hash = window.location.hash.replace(/^#/, '')
+  return Boolean(hash) && hash !== 'walkthrough' && hash !== 'top'
+}
+
 export type VideoScrollSequenceProps = {
   videos: WalkthroughSection[]
   scrollVhPerSection?: number
@@ -39,9 +44,9 @@ function OverlayContent({
             <p className="mb-5 text-[11px] uppercase tracking-[0.35em] text-background/65">
               {section.label}
             </p>
-            <h1 className="font-display text-[clamp(2.8rem,8vw,6.5rem)] leading-[0.95] text-background text-balance">
+            <p className="font-display text-[clamp(2.8rem,8vw,6.5rem)] leading-[0.95] text-background text-balance">
               {section.headline}
-            </h1>
+            </p>
             <p className="mt-7 max-w-xl text-base md:text-lg text-background/70 leading-relaxed">
               {section.description}
             </p>
@@ -387,8 +392,10 @@ export function VideoScrollSequence({
         }
       }
 
-      window.scrollTo(0, 0)
-      window.__lenis?.scrollTo(0, { immediate: true })
+      if (!hasDeepLinkHash()) {
+        window.scrollTo(0, 0)
+        window.__lenis?.scrollTo(0, { immediate: true })
+      }
 
       if (!readyRef.current) {
         readyRef.current = true
@@ -521,8 +528,10 @@ export function VideoScrollSequence({
     setContentVisible(false)
     setActiveIndex(0)
     setVisibleVideo(0)
-    window.scrollTo(0, 0)
-    window.__lenis?.scrollTo(0, { immediate: true })
+    if (!hasDeepLinkHash()) {
+      window.scrollTo(0, 0)
+      window.__lenis?.scrollTo(0, { immediate: true })
+    }
 
     const applyProgress = (progress: number, forceSnap = false) => {
       const unit = progress * count
@@ -566,10 +575,12 @@ export function VideoScrollSequence({
     }, containerRef)
 
     const refreshId = window.setTimeout(() => {
-      window.scrollTo(0, 0)
-      window.__lenis?.scrollTo(0, { immediate: true })
-      targetUnitRef.current = 0
-      smoothUnitRef.current = 0
+      if (!hasDeepLinkHash()) {
+        window.scrollTo(0, 0)
+        window.__lenis?.scrollTo(0, { immediate: true })
+        targetUnitRef.current = 0
+        smoothUnitRef.current = 0
+      }
       ScrollTrigger.refresh()
     }, 100)
 
@@ -603,6 +614,9 @@ export function VideoScrollSequence({
         className={cn('relative bg-[#0c0c0c]', className)}
         aria-label="Cinematic home walkthrough"
       >
+        <h1 className="sr-only">
+          Dream Home Builders — custom home construction across New Jersey
+        </h1>
         <div ref={pinRef} className="relative h-screen w-full overflow-hidden bg-[#0c0c0c]">
           <div className="absolute inset-0 bg-[#121212]">
             {videos.map((section, i) => (
@@ -622,7 +636,7 @@ export function VideoScrollSequence({
                 }}
                 muted
                 playsInline
-                preload={i <= 1 ? 'auto' : 'metadata'}
+                preload={i === 0 ? 'auto' : 'metadata'}
                 disablePictureInPicture
                 controls={false}
                 tabIndex={-1}
