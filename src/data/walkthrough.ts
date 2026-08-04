@@ -5,7 +5,8 @@ export type WalkthroughCta = {
 
 export type WalkthroughSection = {
   id: string
-  src: string
+  /** Optional legacy per-clip src — prefer walkthroughVideoSrc for the continuous film */
+  src?: string
   label: string
   title: string
   headline?: string
@@ -16,84 +17,85 @@ export type WalkthroughSection = {
   variant: 'hero' | 'features' | 'editorial' | 'cards' | 'list' | 'experience' | 'finale'
 }
 
+/** Single continuous hero film — scroll scrubs this one file end-to-end */
+export const walkthroughVideoSrc = '/videos/hero-walkthrough.mp4?v=1'
+
+/**
+ * Chapter overlays timed evenly across the film.
+ * Story arc: vacant lot → foundation → framing → finished elevation →
+ * interiors (foyer / suite / bath / kitchen) → dusk arrival.
+ */
 export const walkthroughSections: WalkthroughSection[] = [
   {
-    id: 'elevations',
-    src: '/videos/01-elevation.mp4?v=smooth3',
-    label: '01 — Elevations',
-    title: 'Elevations',
-    headline: 'Building Dream Homes Across New Jersey',
+    id: 'vision',
+    label: '01 — The Land',
+    title: 'The Land',
+    headline: 'Every Dream Home Starts Here',
     description:
-      'A continuous cinematic journey through a custom luxury residence — controlled entirely by your scroll.',
+      'A quiet New Jersey lot — open sky, mature trees, and the first mark of a custom residence yet to rise.',
     cta: { label: 'Start Your Vision', href: '#contact' },
-    secondaryCta: { label: 'Explore the Home', href: '#about' },
+    secondaryCta: { label: 'Our Process', href: '#process' },
     variant: 'hero',
   },
   {
-    id: 'living-rooms',
-    src: '/videos/02-living-room.mp4?v=smooth3',
-    label: '02 — Living Rooms',
-    title: 'Living Rooms',
+    id: 'foundation',
+    label: '02 — Foundation',
+    title: 'Foundation',
     description:
-      'Volumes of light and proportion where gathering feels effortless — materials chosen for calm, permanence, and presence.',
-    features: ['Double-height volumes', 'Floor-to-ceiling glazing', 'Bespoke millwork', 'Quiet acoustics'],
+      'Crews, steel, and block set the geometry of the home — engineered precision before the first wall goes up.',
+    features: ['Site preparation', 'Structural block', 'Rebar & pours', 'On-site craftsmanship'],
     variant: 'features',
   },
   {
-    id: 'bedrooms',
-    src: '/videos/03-bedroom.mp4?v=smooth3',
-    label: '03 — Bedrooms',
-    title: 'Bedrooms',
+    id: 'framing',
+    label: '03 — Framing',
+    title: 'Framing',
     description:
-      'Private sanctuaries composed with soft light, tactile finishes, and a sense of retreat from the world outside.',
-    features: ['Primary suite retreat', 'Custom wardrobes', 'Layered ambient lighting'],
+      'The silhouette takes shape — roof lines, volumes, and openings that will define light and living for decades.',
+    features: ['Multi-story volumes', 'Complex rooflines', 'Glazing openings'],
     variant: 'editorial',
   },
   {
-    id: 'bathrooms',
-    src: '/videos/04-bathroom.mp4?v=smooth3',
-    label: '04 — Bathrooms',
-    title: 'Bathrooms',
+    id: 'elevation',
+    label: '04 — Elevation',
+    title: 'Elevation',
     description:
-      'Spa-caliber wet spaces — stone, water, and mirror aligned with architectural precision.',
-    features: ['Stone wet rooms', 'Freestanding vessels', 'Heated surfaces', 'Museum lighting'],
+      'Stone, brick, timber, and charcoal cladding resolve into a finished facade — architecture that belongs to the land.',
+    features: ['Natural stone', 'Warm timber', 'Black-framed glass', 'Landscaped arrival'],
     variant: 'cards',
   },
   {
-    id: 'kitchen',
-    src: '/videos/05-kitchen.mp4?v=smooth3',
-    label: '05 — Kitchen & Wet Bars',
-    title: 'Kitchen & Wet Bars',
-    headline: 'Culinary Architecture',
+    id: 'interiors',
+    label: '05 — Interiors',
+    title: 'Interiors',
+    headline: 'Step Inside',
     description:
-      'The social heart of the home — performance kitchens and intimate wet bars designed for both ritual and celebration.',
+      'Double-height foyers, floating stairs, and a continuous material language from threshold to living room.',
     features: [
-      'Chef-grade appliances',
-      'Stone islands',
-      'Concealed storage',
-      'Entertaining wet bars',
-      'Integrated lighting',
+      'Grand foyer',
+      'Floating stair',
+      'Exposed beams',
+      'Open living',
+      'Forest views',
     ],
     variant: 'list',
   },
   {
-    id: 'interiors',
-    src: '/videos/06-interior.mp4?v=smooth3',
-    label: '06 — Interiors',
-    title: 'Interiors',
+    id: 'private-suites',
+    label: '06 — Private Suites',
+    title: 'Private Suites',
     description:
-      'A continuous material language from threshold to terrace — every corridor, stair, and gallery considered as architecture.',
-    features: ['Unified material palette', 'Sculptural circulation', 'Art-ready walls'],
+      'Primary bedrooms and spa baths composed for quiet — stone, soft light, and floor-to-ceiling greenery beyond the glass.',
+    features: ['Master retreat', 'Spa soaking tub', 'Forest outlook'],
     variant: 'experience',
   },
   {
-    id: 'balcony-garage',
-    src: '/videos/07-balcony-garage.mp4?v=smooth3',
-    label: '07 — Balcony & Garage',
-    title: 'Balcony & Garage',
-    headline: 'Where the journey opens outward',
+    id: 'culinary-arrival',
+    label: '07 — Culinary & Arrival',
+    title: 'Culinary & Arrival',
+    headline: 'Where the Journey Opens Home',
     description:
-      'Outdoor living and arrival sequences finished with the same discipline as the interiors — the final frame of a single unbroken walkthrough.',
+      'A chef-grade kitchen for gathering — then dusk lights the finished elevation. Built end to end by Dream Home Builders.',
     cta: { label: 'Request a Consultation', href: '#contact' },
     variant: 'finale',
   },

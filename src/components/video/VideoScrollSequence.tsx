@@ -6,7 +6,7 @@ import { ChevronsDown } from 'lucide-react'
 import { MagneticButton } from '@/components/shared/MagneticButton'
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
-import type { WalkthroughSection } from '@/data/walkthrough'
+import { walkthroughVideoSrc, type WalkthroughSection } from '@/data/walkthrough'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -17,9 +17,9 @@ function hasDeepLinkHash() {
 
 export type VideoScrollSequenceProps = {
   videos: WalkthroughSection[]
+  videoSrc?: string
   scrollVhPerSection?: number
   objectFit?: 'cover' | 'contain'
-  preloadStrategy?: 'all' | 'adjacent'
   className?: string
   onReady?: () => void
   onSectionChange?: (index: number) => void
@@ -237,15 +237,15 @@ function LoadingScreen({ progress, visible }: { progress: number; visible: boole
 function applyOverlayFade(el: HTMLDivElement | null, local: number) {
   if (!el) return
   let opacity = 1
-  if (local < 0.04) opacity = 0.55 + (local / 0.04) * 0.45
-  else if (local > 0.92) opacity = Math.max(0.35, (1 - local) / 0.08)
+  if (local < 0.06) opacity = 0.55 + (local / 0.06) * 0.45
+  else if (local > 0.9) opacity = Math.max(0.4, (1 - local) / 0.1)
   el.style.opacity = String(opacity)
 }
 
-function safeTime(duration: number, local: number) {
+function safeTime(duration: number, progress: number) {
   if (!Number.isFinite(duration) || duration <= 0) return 0.001
   const max = Math.max(duration - 0.05, 0.001)
-  return Math.min(Math.max(local, 0), 1) * max
+  return Math.min(Math.max(progress, 0), 1) * max
 }
 
 async function unlockVideo(video: HTMLVideoElement) {
@@ -274,7 +274,7 @@ async function unlockVideo(video: HTMLVideoElement) {
   })
 }
 
-function seekVideo(video: HTMLVideoElement, time: number, minDelta = 0.04) {
+function seekVideo(video: HTMLVideoElement, time: number, minDelta = 0.05) {
   if (!Number.isFinite(video.duration) || video.duration <= 0) return
   if (video.seeking || video.readyState < 2) return
   const desired = Math.min(Math.max(time, 0.001), Math.max(video.duration - 0.05, 0.001))
@@ -288,31 +288,28 @@ function seekVideo(video: HTMLVideoElement, time: number, minDelta = 0.04) {
 
 export function VideoScrollSequence({
   videos,
-  scrollVhPerSection = 300,
+  videoSrc = walkthroughVideoSrc,
+  scrollVhPerSection = 220,
   objectFit = 'cover',
-  preloadStrategy = 'adjacent',
   className,
   onReady,
   onSectionChange,
 }: VideoScrollSequenceProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const pinRef = useRef<HTMLDivElement>(null)
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const fadeRef = useRef<HTMLDivElement | null>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const counterRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<ScrollTrigger | null>(null)
 
-  /** Scroll-driven target on a continuous 0→N timeline */
-  const targetUnitRef = useRef(0)
-  /** Smoothed unit that lerps toward the target every frame */
-  const smoothUnitRef = useRef(0)
+  const smoothProgressRef = useRef(0)
   const activeIndexRef = useRef(0)
   const readyRef = useRef(false)
   const contentVisibleRef = useRef(false)
   const lastUiIndexRef = useRef(-1)
   const lastSeekMsRef = useRef(0)
-  const warmedRef = useRef<Set<number>>(new Set())
+  const lastSeekTimeRef = useRef(-1)
 
   const [ready, setReady] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
@@ -320,81 +317,52 @@ export function VideoScrollSequence({
   const [contentVisible, setContentVisible] = useState(false)
 
   const reduced = usePrefersReducedMotion()
+  const chapterCount = videos.length
 
-  const setVisibleVideo = (index: number) => {
-    videoRefs.current.forEach((video, i) => {
-      if (!video) return
-      const on = i === index
-      video.style.opacity = on ? '1' : '0'
-      video.style.zIndex = on ? '2' : '1'
-    })
-  }
+  const applyProgress = (progressRaw: number, force = false) => {
+    const progress = Math.min(Math.max(progressRaw, 0), 1)
+    smoothProgressRef.current = progress
 
-  const syncUnit = (unit: number, immediate = false) => {
-    const count = videos.length
-    const clamped = Math.min(Math.max(unit, 0), count - 0.0001)
-    targetUnitRef.current = clamped
-    if (immediate || Math.abs(clamped - smoothUnitRef.current) > 0.6) {
-      smoothUnitRef.current = clamped
-    }
-  }
-
-  const applyUnitToVideos = (unitRaw: number, force = false) => {
-    const count = videos.length
-    const unit = Math.min(Math.max(unitRaw, 0), count - 0.0001)
-    const index = Math.min(Math.floor(unit), count - 1)
+    const unit = progress * chapterCount
+    const index = Math.min(Math.floor(unit), chapterCount - 1)
     const local = unit - index
-    const video = videoRefs.current[index]
 
-    if (index !== activeIndexRef.current) {
-      const prev = activeIndexRef.current
-      const prevVideo = videoRefs.current[prev]
-      const nextVideo = videoRefs.current[index]
-
-      if (nextVideo && Number.isFinite(nextVideo.duration)) {
-        const seam = index > prev ? 0.001 : safeTime(nextVideo.duration, 0.999)
-        seekVideo(nextVideo, seam, 0.02)
-      }
-
-      setVisibleVideo(index)
-      if (prevVideo && prev !== index) prevVideo.style.opacity = '0'
-
+    if (index !== activeIndexRef.current || lastUiIndexRef.current !== index) {
       activeIndexRef.current = index
-      if (lastUiIndexRef.current !== index) {
-        lastUiIndexRef.current = index
-        setActiveIndex(index)
-        onSectionChange?.(index)
-      }
-
-      ;[index + 1, index - 1].forEach((neighbor) => {
-        const clip = videoRefs.current[neighbor]
-        if (!clip || warmedRef.current.has(neighbor)) return
-        warmedRef.current.add(neighbor)
-        clip.preload = 'auto'
-        void unlockVideo(clip)
-      })
+      lastUiIndexRef.current = index
+      setActiveIndex(index)
+      onSectionChange?.(index)
     }
 
+    const video = videoRef.current
     const now = performance.now()
-    if (video && (force || now - lastSeekMsRef.current > 90)) {
-      lastSeekMsRef.current = now
-      seekVideo(video, safeTime(video.duration || 1, local), 0.12)
+    // Throttle seeks; denser keyframes allow slightly more frequent updates
+    if (video && (force || now - lastSeekMsRef.current > 70)) {
+      const t = safeTime(video.duration || 1, progress)
+      // Skip tiny seeks that browsers can't resolve smoothly
+      if (force || Math.abs(t - lastSeekTimeRef.current) >= 0.08) {
+        lastSeekMsRef.current = now
+        lastSeekTimeRef.current = t
+        seekVideo(video, t, force ? 0.02 : 0.1)
+      }
     }
 
     applyOverlayFade(fadeRef.current, local)
 
-    const overall = unit / count
-    if (progressBarRef.current) progressBarRef.current.style.width = `${overall * 100}%`
+    if (progressBarRef.current) progressBarRef.current.style.width = `${progress * 100}%`
     if (counterRef.current) {
-      counterRef.current.textContent = `Scroll to explore · ${String(index + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`
+      counterRef.current.textContent = `Scroll to explore · ${String(index + 1).padStart(2, '0')} / ${String(chapterCount).padStart(2, '0')}`
+    }
+
+    const show = progress > 0.01
+    if (contentVisibleRef.current !== show) {
+      contentVisibleRef.current = show
+      setContentVisible(show)
     }
   }
 
   const skipWalkthrough = () => {
-    const count = videos.length
-    syncUnit(count - 0.0001, true)
-    applyUnitToVideos(count - 0.0001, true)
-
+    applyProgress(1, true)
     const about = document.getElementById('about')
     if (about) {
       about.scrollIntoView({ behavior: 'smooth' })
@@ -404,50 +372,40 @@ export function VideoScrollSequence({
     if (st) window.scrollTo({ top: st.end + 40, behavior: 'smooth' })
   }
 
-  // Preload
+  // Preload single film
   useEffect(() => {
     let cancelled = false
-    const vids = videoRefs.current.filter(Boolean) as HTMLVideoElement[]
-    if (!vids.length) return
+    const video = videoRef.current
+    if (!video) return
 
-    vids.forEach((video, i) => {
-      video.muted = true
-      video.playsInline = true
-      video.preload = i === 0 ? 'auto' : 'metadata'
-      video.pause()
-    })
+    video.muted = true
+    video.playsInline = true
+    video.preload = 'auto'
+    video.pause()
 
     const boot = async () => {
-      setLoadProgress(0.2)
-      const first = vids[0]
-      if (first) {
-        await new Promise<void>((resolve) => {
-          if (first.readyState >= 2) resolve()
-          else {
-            first.addEventListener('loadeddata', () => resolve(), { once: true })
-            first.addEventListener('canplay', () => resolve(), { once: true })
-            window.setTimeout(() => resolve(), 8000)
-          }
-        })
-        if (cancelled) return
-        setLoadProgress(0.55)
-        await unlockVideo(first)
-        warmedRef.current.add(0)
-        if (cancelled) return
-        setVisibleVideo(0)
-        setLoadProgress(0.85)
-      }
+      setLoadProgress(0.15)
+      await new Promise<void>((resolve) => {
+        if (video.readyState >= 2) resolve()
+        else {
+          video.addEventListener('loadeddata', () => resolve(), { once: true })
+          video.addEventListener('canplay', () => resolve(), { once: true })
+          window.setTimeout(() => resolve(), 10000)
+        }
+      })
+      if (cancelled) return
+      setLoadProgress(0.55)
+      await unlockVideo(video)
+      if (cancelled) return
+      setLoadProgress(0.9)
+      seekVideo(video, 0.001, 0)
 
-      // Always begin the cinematic sequence at frame 0 / scroll 0
-      targetUnitRef.current = 0
-      smoothUnitRef.current = 0
+      smoothProgressRef.current = 0
       activeIndexRef.current = 0
       lastUiIndexRef.current = 0
       contentVisibleRef.current = false
       setContentVisible(false)
       setActiveIndex(0)
-      setVisibleVideo(0)
-      if (first) seekVideo(first, 0.001, 0)
 
       if (!hasDeepLinkHash()) {
         window.scrollTo(0, 0)
@@ -459,17 +417,6 @@ export function VideoScrollSequence({
         setLoadProgress(1)
         onReady?.()
       }
-
-      // Only warm the next clip — loading all 7 at once stalls scrubbing on Azure
-      const second = vids[1]
-      if (second) {
-        window.setTimeout(() => {
-          if (cancelled || warmedRef.current.has(1)) return
-          warmedRef.current.add(1)
-          void unlockVideo(second)
-          second.style.opacity = '0'
-        }, 400)
-      }
     }
 
     void boot()
@@ -480,47 +427,35 @@ export function VideoScrollSequence({
       setReady(true)
       setLoadProgress(1)
       onReady?.()
-      setVisibleVideo(0)
-    }, 12000)
+    }, 14000)
 
     return () => {
       cancelled = true
       window.clearTimeout(timeout)
     }
-  }, [videos, preloadStrategy, onReady])
+  }, [videoSrc, onReady])
 
-  // Native ScrollTrigger drives scrub — no Lenis, no 60fps seek ticker
+  // Native ScrollTrigger — one film, progress 0→1
   useEffect(() => {
     if (!ready || !containerRef.current || !pinRef.current || reduced) return
 
-    const count = videos.length
-
-    targetUnitRef.current = 0
-    smoothUnitRef.current = 0
+    smoothProgressRef.current = 0
     contentVisibleRef.current = false
     setContentVisible(false)
     setActiveIndex(0)
-    setVisibleVideo(0)
     if (!hasDeepLinkHash()) {
       window.scrollTo(0, 0)
     }
 
-    const applyProgress = (progress: number, forceSnap = false) => {
-      const unit = progress * count
-      targetUnitRef.current = unit
-      if (forceSnap || Math.abs(unit - smoothUnitRef.current) > 0.35) {
-        smoothUnitRef.current = Math.min(Math.max(unit, 0), count - 0.0001)
-      } else {
-        smoothUnitRef.current += (unit - smoothUnitRef.current) * 0.35
+    const onScrollProgress = (progress: number, forceSnap = false) => {
+      if (forceSnap) {
+        smoothProgressRef.current = progress
+        applyProgress(progress, true)
+        return
       }
-
-      const show = progress > 0.012
-      if (contentVisibleRef.current !== show) {
-        contentVisibleRef.current = show
-        setContentVisible(show)
-      }
-
-      applyUnitToVideos(smoothUnitRef.current, forceSnap)
+      // Light lerp so scrub doesn't stutter on trackpad bursts
+      smoothProgressRef.current += (progress - smoothProgressRef.current) * 0.42
+      applyProgress(smoothProgressRef.current)
     }
 
     const ctx = gsap.context(() => {
@@ -531,20 +466,21 @@ export function VideoScrollSequence({
         scrub: true,
         pinSpacing: true,
         start: 'top top',
-        end: () => `+=${Math.round(count * window.innerHeight * (scrollVhPerSection / 100))}`,
+        end: () =>
+          `+=${Math.round(chapterCount * window.innerHeight * (scrollVhPerSection / 100))}`,
         invalidateOnRefresh: true,
         fastScrollEnd: true,
         onUpdate: (self) => {
-          applyProgress(self.progress)
+          onScrollProgress(self.progress)
         },
         onEnterBack: (self) => {
-          applyProgress(self.progress, true)
+          onScrollProgress(self.progress, true)
         },
         onEnter: (self) => {
-          applyProgress(self.progress, true)
+          onScrollProgress(self.progress, true)
         },
         onRefresh: (self) => {
-          applyProgress(self.progress, true)
+          onScrollProgress(self.progress, true)
         },
       })
     }, containerRef)
@@ -552,8 +488,7 @@ export function VideoScrollSequence({
     const refreshId = window.setTimeout(() => {
       if (!hasDeepLinkHash()) {
         window.scrollTo(0, 0)
-        targetUnitRef.current = 0
-        smoothUnitRef.current = 0
+        smoothProgressRef.current = 0
       }
       ScrollTrigger.refresh()
     }, 100)
@@ -572,7 +507,9 @@ export function VideoScrollSequence({
       triggerRef.current = null
       ctx.revert()
     }
-  }, [ready, videos.length, scrollVhPerSection, reduced, onSectionChange])
+    // applyProgress closes over chapterCount / refs — intentional
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, chapterCount, scrollVhPerSection, reduced, onSectionChange])
 
   useEffect(() => {
     if (!reduced || !ready) return
@@ -583,7 +520,7 @@ export function VideoScrollSequence({
 
   useEffect(() => {
     if (!ready || !contentVisible) return
-    const id = window.requestAnimationFrame(() => applyOverlayFade(fadeRef.current, 0.3))
+    const id = window.requestAnimationFrame(() => applyOverlayFade(fadeRef.current, 0.35))
     return () => window.cancelAnimationFrame(id)
   }, [activeIndex, ready, contentVisible])
 
@@ -602,30 +539,25 @@ export function VideoScrollSequence({
         </h1>
         <div ref={pinRef} className="relative h-screen w-full overflow-hidden bg-[#0c0c0c]">
           <div className="absolute inset-0 bg-[#121212]">
-            {videos.map((section, i) => (
-              <video
-                key={`${section.id}-smooth`}
-                ref={(el) => {
-                  videoRefs.current[i] = el
-                }}
-                src={section.src}
-                className="absolute inset-0 h-full w-full will-change-[opacity]"
-                style={{
-                  objectFit,
-                  opacity: i === 0 ? 1 : 0,
-                  zIndex: i === 0 ? 2 : 1,
-                  transform: 'translateZ(0)',
-                  backgroundColor: '#121212',
-                }}
-                muted
-                playsInline
-                preload={i === 0 ? 'auto' : 'metadata'}
-                disablePictureInPicture
-                controls={false}
-                tabIndex={-1}
-                aria-hidden={i !== activeIndex}
-              />
-            ))}
+            <video
+              ref={videoRef}
+              src={videoSrc}
+              className="absolute inset-0 h-full w-full"
+              style={{
+                objectFit,
+                opacity: 1,
+                zIndex: 2,
+                transform: 'translateZ(0)',
+                backgroundColor: '#121212',
+              }}
+              muted
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              controls={false}
+              tabIndex={-1}
+              aria-hidden
+            />
 
             <div className="pointer-events-none absolute inset-0 z-[4] bg-gradient-to-b from-black/35 via-black/10 to-black/45" />
             <div className="pointer-events-none absolute inset-0 z-[4] bg-gradient-to-r from-black/25 via-transparent to-black/15" />
@@ -638,13 +570,10 @@ export function VideoScrollSequence({
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
                 className="absolute inset-0 z-10"
               >
-                <OverlayContent
-                  section={videos[activeIndex]}
-                  fadeRef={fadeRef}
-                />
+                <OverlayContent section={videos[activeIndex]} fadeRef={fadeRef} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -658,7 +587,7 @@ export function VideoScrollSequence({
               ref={counterRef}
               className="text-[10px] uppercase tracking-[0.28em] text-background/45"
             >
-              Scroll to explore · 01 / {String(videos.length).padStart(2, '0')}
+              Scroll to explore · 01 / {String(chapterCount).padStart(2, '0')}
             </div>
 
             <button

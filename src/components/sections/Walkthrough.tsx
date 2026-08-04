@@ -1,13 +1,13 @@
 import { VideoScrollSequence } from '@/components/video/VideoScrollSequence'
-import { walkthroughSections } from '@/data/walkthrough'
+import { walkthroughSections, walkthroughVideoSrc } from '@/data/walkthrough'
 
 export function Walkthrough() {
   return (
     <VideoScrollSequence
       videos={walkthroughSections}
-      scrollVhPerSection={160}
+      videoSrc={walkthroughVideoSrc}
+      scrollVhPerSection={200}
       objectFit="cover"
-      preloadStrategy="adjacent"
     />
   )
 }
