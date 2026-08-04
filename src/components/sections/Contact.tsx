@@ -1,20 +1,35 @@
 import { useState, type FormEvent } from 'react'
 import { MapPin, Clock, Phone, Video, Navigation } from 'lucide-react'
 import { siteConfig } from '@/data/content'
+import { submitFormspree } from '@/lib/formspree'
 import { Reveal } from '@/components/shared/Reveal'
 import { cn } from '@/lib/utils'
 
 type ContactTab = 'in-person' | 'virtual'
+type FormStatus = 'idle' | 'sending' | 'success' | 'error'
 
 export function Contact() {
   const [tab, setTab] = useState<ContactTab>('in-person')
-  const [sent, setSent] = useState(false)
+  const [status, setStatus] = useState<FormStatus>('idle')
+  const [message, setMessage] = useState('')
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setSent(true)
-    window.setTimeout(() => setSent(false), 4000)
-    e.currentTarget.reset()
+    const form = e.currentTarget
+    setStatus('sending')
+    setMessage('')
+
+    const endpoint =
+      tab === 'in-person' ? siteConfig.forms.contactInPerson : siteConfig.forms.contactVirtual
+
+    const data = new FormData(form)
+    data.set('contact_mode', tab === 'in-person' ? 'In Person' : 'Virtual')
+    data.set('_subject', `Dream Home Builders — ${tab === 'in-person' ? 'In Person' : 'Virtual'} inquiry`)
+
+    const result = await submitFormspree(endpoint, data)
+    setStatus(result.ok ? 'success' : 'error')
+    setMessage(result.message)
+    if (result.ok) form.reset()
   }
 
   return (
@@ -29,7 +44,11 @@ export function Contact() {
         <div className="mt-10 flex items-center justify-center gap-10 border-b border-foreground/10">
           <button
             type="button"
-            onClick={() => setTab('in-person')}
+            onClick={() => {
+              setTab('in-person')
+              setStatus('idle')
+              setMessage('')
+            }}
             className={cn(
               'relative flex items-center gap-2 pb-4 text-sm font-medium transition-colors',
               tab === 'in-person' ? 'text-secondary' : 'text-muted hover:text-foreground',
@@ -43,7 +62,11 @@ export function Contact() {
           </button>
           <button
             type="button"
-            onClick={() => setTab('virtual')}
+            onClick={() => {
+              setTab('virtual')
+              setStatus('idle')
+              setMessage('')
+            }}
             className={cn(
               'relative flex items-center gap-2 pb-4 text-sm font-medium transition-colors',
               tab === 'virtual' ? 'text-secondary' : 'text-muted hover:text-foreground',
@@ -86,7 +109,7 @@ export function Contact() {
               {tab === 'in-person' && (
                 <div className="mt-8 overflow-hidden rounded-xl border border-foreground/10 bg-card shadow-sm">
                   <iframe
-                    title="Dream Home Builder office map"
+                    title="Dream Home Builders office map"
                     src={siteConfig.mapEmbedUrl}
                     className="h-64 w-full border-0 md:h-72"
                     loading="lazy"
@@ -150,7 +173,7 @@ export function Contact() {
                   <span className="sr-only">Project Details</span>
                   <textarea
                     required
-                    name="details"
+                    name="message"
                     rows={5}
                     placeholder="Tell us about your project..."
                     className="w-full resize-none border border-foreground/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-accent"
@@ -158,10 +181,25 @@ export function Contact() {
                 </label>
                 <button
                   type="submit"
-                  className="mt-5 w-full bg-secondary py-3.5 text-sm font-medium tracking-wide text-background transition hover:bg-accent hover:text-foreground"
+                  disabled={status === 'sending'}
+                  className="mt-5 w-full bg-secondary py-3.5 text-sm font-medium tracking-wide text-background transition hover:bg-accent hover:text-foreground disabled:opacity-60"
                 >
-                  {sent ? 'Message Sent' : 'Send Message'}
+                  {status === 'sending'
+                    ? 'Sending...'
+                    : status === 'success'
+                      ? 'Message Sent'
+                      : 'Send Message'}
                 </button>
+                {message && (
+                  <p
+                    className={cn(
+                      'mt-3 text-sm',
+                      status === 'error' ? 'text-red-600' : 'text-muted',
+                    )}
+                  >
+                    {message}
+                  </p>
+                )}
               </form>
             </div>
           </Reveal>

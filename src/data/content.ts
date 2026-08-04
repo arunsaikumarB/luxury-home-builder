@@ -1,17 +1,22 @@
 export const siteConfig = {
-  name: 'Dream Home Builder',
+  name: 'Dream Home Builders',
   tagline: 'Building excellence since 2015.',
   description:
     'Award-caliber custom luxury home construction across New Jersey. From architectural vision to finished estate — crafted with precision, integrity, and timeless design.',
-  url: 'https://dreamhomebuilder.com',
+  url: 'https://dreamhomebuildersnj.com',
   phone: '(908) 797-1777',
-  email: 'hello@dreamhomebuilder.com',
+  email: 'dreamhomebuildersnj@gmail.com',
   address: '25 Parker Rd, Edison NJ 08820',
   hours: 'Mon - Fri: 9am - 6pm',
   founded: 2015,
   mapEmbedUrl:
     'https://maps.google.com/maps?q=25%20Parker%20Rd%2C%20Edison%20NJ%2008820&t=&z=15&ie=UTF8&iwloc=&output=embed',
   mapLink: 'https://maps.google.com/?q=25+Parker+Rd,+Edison+NJ+08820',
+  forms: {
+    contactInPerson: 'https://formspree.io/f/xykpgpzk',
+    contactVirtual: 'https://formspree.io/f/mqeyarzv',
+    quote: 'https://formspree.io/f/mjgowdwe',
+  },
   social: {
     instagram: 'https://instagram.com',
     linkedin: 'https://linkedin.com',
@@ -38,7 +43,7 @@ export const footerQuickLinks = [
 export const footerContactLinks = [
   { label: 'Call Us', href: 'tel:+19087971777' },
   { label: 'Send A Quick Note', href: '#contact' },
-  { label: 'Email Us', href: 'mailto:hello@dreamhomebuilder.com' },
+  { label: 'Email Us', href: 'mailto:dreamhomebuildersnj@gmail.com' },
   { label: '25 Parker Rd, Edison NJ 08820', href: 'https://maps.google.com/?q=25+Parker+Rd,+Edison+NJ+08820' },
 ]
 
@@ -253,27 +258,45 @@ export const whyUs = [
 export const testimonials = [
   {
     quote:
-      'They didn’t just build our home — they composed it. Every morning light through the great room still feels intentional.',
-    name: 'Catherine & James W.',
-    location: 'Short Hills',
+      "Dileep's honesty was refreshing. We did a full kitchen remodel, and he was upfront about costs and timelines from day one. Highly recommend!",
+    name: 'Sarah J.',
+    location: 'Kitchen Remodel',
   },
   {
     quote:
-      'The process was as refined as the finished residence. Communication, craftsmanship, and calm — throughout.',
-    name: 'Michael R.',
-    location: 'Summit',
+      "Building a new home is stressful, but Dileep's responsiveness made it manageable. He always answered his phone, even for the smallest questions.",
+    name: 'Madhu D.',
+    location: 'New Construction',
   },
   {
     quote:
-      'From the first site walk to the final walkthrough, we felt we were working with true artists who happen to build.',
-    name: 'Priya & Arjun S.',
-    location: 'Princeton',
+      "The fast turnaround on our bathroom upgrade was incredible. Dileep's dedication to finishing on schedule while maintaining quality was impressive.",
+    name: 'Elena R.',
+    location: 'Bathroom Upgrade',
   },
   {
     quote:
-      'Our Alpine estate exceeded every expectation. Neighbors still stop to ask who built it.',
-    name: 'Elena M.',
-    location: 'Alpine',
+      'Dileep is a true professional. He guided us through our patio upgrade with great care. His communication was top-notch throughout the process.',
+    name: 'David L.',
+    location: 'Outdoor Living',
+  },
+  {
+    quote:
+      'We needed a major structural wall removed to create an open concept. Dileep handled the engineering and permits seamlessly. Truly expert work.',
+    name: 'Priya K.',
+    location: 'Structural Renovation',
+  },
+  {
+    quote:
+      "Our custom basement finished ahead of schedule. Dileep has a great eye for detail and suggested a layout we hadn't even considered. We love it!",
+    name: 'Linda K.',
+    location: 'Basement Finishing',
+  },
+  {
+    quote:
+      'Professional, clean, and reliable. Dream Home Builders transformed our old siding and roof. The house looks brand new again. Exceptional value.',
+    name: 'Happy Client',
+    location: 'Exterior Refresh',
   },
 ]
 

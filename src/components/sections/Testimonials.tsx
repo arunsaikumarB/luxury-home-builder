@@ -101,7 +101,7 @@ export function Testimonials() {
               </p>
               <div className="mt-8 pt-6 border-t border-foreground/10">
                 <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-muted mt-1">{item.location}, NJ</p>
+                <p className="text-sm text-muted mt-1">{item.location}</p>
               </div>
             </article>
           ))}

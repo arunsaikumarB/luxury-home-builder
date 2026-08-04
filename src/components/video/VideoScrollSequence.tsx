@@ -210,7 +210,7 @@ function LoadingScreen({ progress, visible }: { progress: number; visible: boole
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] } }}
         >
-          <p className="font-display text-3xl md:text-5xl tracking-tight">Dream Home Builder</p>
+          <p className="font-display text-3xl md:text-5xl tracking-tight">Dream Home Builders</p>
           <p className="mt-3 text-[11px] uppercase tracking-[0.35em] text-background/50">
             Preparing cinematic walkthrough
           </p>

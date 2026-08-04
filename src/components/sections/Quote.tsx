@@ -1,16 +1,29 @@
 import { useState, type FormEvent } from 'react'
 import { Hammer, CalendarDays } from 'lucide-react'
-import { services } from '@/data/content'
+import { services, siteConfig } from '@/data/content'
+import { submitFormspree } from '@/lib/formspree'
 import { Reveal } from '@/components/shared/Reveal'
+import { cn } from '@/lib/utils'
+
+type FormStatus = 'idle' | 'sending' | 'success' | 'error'
 
 export function Quote() {
-  const [sent, setSent] = useState(false)
+  const [status, setStatus] = useState<FormStatus>('idle')
+  const [message, setMessage] = useState('')
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setSent(true)
-    window.setTimeout(() => setSent(false), 4000)
-    e.currentTarget.reset()
+    const form = e.currentTarget
+    setStatus('sending')
+    setMessage('')
+
+    const data = new FormData(form)
+    data.set('_subject', 'Dream Home Builders — Quote Request')
+
+    const result = await submitFormspree(siteConfig.forms.quote, data)
+    setStatus(result.ok ? 'success' : 'error')
+    setMessage(result.message)
+    if (result.ok) form.reset()
   }
 
   return (
@@ -38,7 +51,7 @@ export function Quote() {
                   <Hammer className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                   <select
                     required
-                    name="service"
+                    name="service_required"
                     defaultValue=""
                     className="w-full appearance-none border border-foreground/15 bg-card py-3 pl-10 pr-4 text-sm outline-none transition focus:border-accent"
                   >
@@ -75,7 +88,7 @@ export function Quote() {
                   Total Square Footage (Optional)
                 </span>
                 <input
-                  name="sqft"
+                  name="square_footage"
                   type="text"
                   placeholder="e.g. 2,500 sq ft"
                   className="w-full border border-foreground/15 bg-card px-4 py-3 text-sm outline-none transition focus:border-accent"
@@ -88,7 +101,7 @@ export function Quote() {
                 </span>
                 <div className="relative">
                   <input
-                    name="startDate"
+                    name="start_date"
                     type="date"
                     className="w-full border border-foreground/15 bg-card px-4 py-3 text-sm outline-none transition focus:border-accent"
                   />
@@ -125,10 +138,20 @@ export function Quote() {
 
             <button
               type="submit"
-              className="w-full bg-secondary py-4 text-sm font-semibold uppercase tracking-[0.16em] text-background transition hover:bg-accent hover:text-foreground"
+              disabled={status === 'sending'}
+              className="w-full bg-secondary py-4 text-sm font-semibold uppercase tracking-[0.16em] text-background transition hover:bg-accent hover:text-foreground disabled:opacity-60"
             >
-              {sent ? 'Quote Request Sent' : 'Request Detailed Quote'}
+              {status === 'sending'
+                ? 'Sending...'
+                : status === 'success'
+                  ? 'Quote Request Sent'
+                  : 'Request Detailed Quote'}
             </button>
+            {message && (
+              <p className={cn('text-sm', status === 'error' ? 'text-red-600' : 'text-muted')}>
+                {message}
+              </p>
+            )}
           </form>
         </Reveal>
       </div>

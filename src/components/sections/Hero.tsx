@@ -137,7 +137,7 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
           >
-            Dream Home Builder · New Jersey
+            Dream Home Builders · New Jersey
           </motion.p>
 
           <h1 className="font-display text-[clamp(3rem,9vw,7.5rem)] text-background leading-[0.95]">

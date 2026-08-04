@@ -8,7 +8,7 @@ export function Footer() {
           <div>
             <h2 className="font-display text-3xl md:text-4xl leading-none">
               Dream Home
-              <span className="text-accent"> Builder</span>
+              <span className="text-accent"> Builders</span>
             </h2>
             <p className="mt-4 text-background/70">{siteConfig.tagline}</p>
           </div>
