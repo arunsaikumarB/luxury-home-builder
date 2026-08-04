@@ -18,6 +18,7 @@
     }
   ],
   "navigationFallback": {
-    "rewrite": "/index.html"
+    "rewrite": "/index.html",
+    "exclude": ["/videos/*", "/assets/*", "/*.{css,js,mjs,map,png,jpg,jpeg,gif,svg,webp,ico,woff,woff2,mp4,webm}"]
   }
 }

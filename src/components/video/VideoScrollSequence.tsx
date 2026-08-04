@@ -10,6 +10,8 @@ import { walkthroughVideoSrc, type WalkthroughSection } from '@/data/walkthrough
 
 gsap.registerPlugin(ScrollTrigger)
 
+const HERO_POSTER = '/videos/hero-poster.jpg?v=2'
+
 function hasDeepLinkHash() {
   const hash = window.location.hash.replace(/^#/, '')
   return Boolean(hash) && hash !== 'walkthrough' && hash !== 'top'
@@ -383,22 +385,73 @@ export function VideoScrollSequence({
     video.preload = 'auto'
     video.pause()
 
+    const markReady = () => {
+      if (cancelled || readyRef.current) return
+      readyRef.current = true
+      setReady(true)
+      setLoadProgress(1)
+      onReady?.()
+    }
+
     const boot = async () => {
-      setLoadProgress(0.15)
-      await new Promise<void>((resolve) => {
-        if (video.readyState >= 2) resolve()
-        else {
-          video.addEventListener('loadeddata', () => resolve(), { once: true })
-          video.addEventListener('canplay', () => resolve(), { once: true })
-          window.setTimeout(() => resolve(), 10000)
+      setLoadProgress(0.12)
+
+      // Fail fast if Azure/SWA returns HTML fallback instead of video/mp4
+      try {
+        const probe = await fetch(videoSrc, { method: 'HEAD', cache: 'no-store' })
+        const type = (probe.headers.get('content-type') || '').toLowerCase()
+        if (!probe.ok || type.includes('text/html')) {
+          console.error('[walkthrough] Video asset missing or mis-served', {
+            status: probe.status,
+            type,
+            src: videoSrc,
+          })
+          // Still show poster + UI rather than infinite loader
+          markReady()
+          return
         }
+      } catch {
+        /* continue — HEAD may be blocked; rely on video element events */
+      }
+
+      if (cancelled) return
+      setLoadProgress(0.28)
+
+      await new Promise<void>((resolve) => {
+        if (video.readyState >= 2 && Number.isFinite(video.duration) && video.duration > 0) {
+          resolve()
+          return
+        }
+        const done = () => resolve()
+        video.addEventListener('loadeddata', done, { once: true })
+        video.addEventListener('canplay', done, { once: true })
+        video.addEventListener('error', done, { once: true })
+        window.setTimeout(done, 12000)
       })
       if (cancelled) return
-      setLoadProgress(0.55)
+
+      if (!Number.isFinite(video.duration) || video.duration <= 0) {
+        console.error('[walkthrough] Video failed to decode', videoSrc)
+        markReady()
+        return
+      }
+
+      setLoadProgress(0.6)
       await unlockVideo(video)
       if (cancelled) return
       setLoadProgress(0.9)
-      seekVideo(video, 0.001, 0)
+
+      // Paint first frame for browsers that stay blank until seeked
+      try {
+        video.currentTime = 0.05
+        await new Promise<void>((resolve) => {
+          const done = () => resolve()
+          video.addEventListener('seeked', done, { once: true })
+          window.setTimeout(done, 800)
+        })
+      } catch {
+        /* ignore */
+      }
 
       smoothProgressRef.current = 0
       activeIndexRef.current = 0
@@ -411,22 +464,13 @@ export function VideoScrollSequence({
         window.scrollTo(0, 0)
       }
 
-      if (!readyRef.current) {
-        readyRef.current = true
-        setReady(true)
-        setLoadProgress(1)
-        onReady?.()
-      }
+      markReady()
     }
 
     void boot()
 
     const timeout = window.setTimeout(() => {
-      if (cancelled || readyRef.current) return
-      readyRef.current = true
-      setReady(true)
-      setLoadProgress(1)
-      onReady?.()
+      markReady()
     }, 14000)
 
     return () => {
@@ -542,6 +586,7 @@ export function VideoScrollSequence({
             <video
               ref={videoRef}
               src={videoSrc}
+              poster={HERO_POSTER}
               className="absolute inset-0 h-full w-full"
               style={{
                 objectFit,
@@ -558,7 +603,6 @@ export function VideoScrollSequence({
               tabIndex={-1}
               aria-hidden
             />
-
             <div className="pointer-events-none absolute inset-0 z-[4] bg-gradient-to-b from-black/35 via-black/10 to-black/45" />
             <div className="pointer-events-none absolute inset-0 z-[4] bg-gradient-to-r from-black/25 via-transparent to-black/15" />
           </div>
